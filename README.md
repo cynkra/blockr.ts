@@ -45,7 +45,8 @@ This package provides three types of time series blocks:
 - **`new_ts_dataset_block()`** - Access to all 25 built-in R time series datasets
 
 ### Transform Blocks
-- **`new_ts_pc_block()`** - Compute percentage changes
+- **`new_ts_pc_block()`** - Simple percentage change (no parameters)
+- **`new_ts_change_block()`** - Comprehensive change calculations with method selector
 
 ### Display
 All blocks automatically display results as interactive dygraphs with:
@@ -120,16 +121,49 @@ blockr.core::serve(
   new_ts_pc_block()
 )
 
-# Works with multivariate data
-blockr.core::serve(
-  new_ts_dataset_block(dataset = "EuStockMarkets"),
-  new_ts_pc_block()
-)
-
 # Standalone usage with direct data input
 blockr.core::serve(
   new_ts_pc_block(),
   data = list(data = tsbox::ts_tbl(datasets::AirPassengers))
+)
+```
+
+### `new_ts_change_block()`
+
+Comprehensive transform block for calculating various types of changes in time series data.
+
+**Parameters:**
+- `method`: Calculation method (default: "pc")
+  - `"pc"` - Period-on-period percentage change
+  - `"pcy"` - Year-on-year percentage change
+  - `"pca"` - Annualized percentage change
+  - `"diff"` - First differences (absolute change)
+  - `"diffy"` - Year-on-year differences
+
+**Features:**
+- Interactive dropdown to switch between calculation methods
+- Dynamic descriptions explaining each method
+- Works with all time series frequencies
+- Handles both univariate and multivariate data
+
+**Example:**
+```r
+# Year-over-year percentage change
+blockr.core::serve(
+  new_ts_dataset_block(dataset = "AirPassengers"),
+  new_ts_change_block(method = "pcy")
+)
+
+# First differences for CO2 data
+blockr.core::serve(
+  new_ts_dataset_block(dataset = "co2"),
+  new_ts_change_block(method = "diff")
+)
+
+# Annualized percentage change for stock data
+blockr.core::serve(
+  new_ts_dataset_block(dataset = "EuStockMarkets"),
+  new_ts_change_block(method = "pca")
 )
 ```
 
