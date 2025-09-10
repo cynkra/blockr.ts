@@ -5,14 +5,12 @@
 #' @export
 register_ts_blocks <- function() {
   blockr.core::register_blocks(
-    c("new_ts_block", "new_ts_pc_block", "new_ts_plot_block"),
-    name = c("Time Series Data", "Time Series Percentage Change", "Time Series Plot"),
+    c("new_ts_block"),
+    name = c("Time Series Data"),
     description = c(
-      "Load and transform time series data with format conversion support",
-      "Calculate percentage changes and differences in time series data",
-      "Create interactive time series visualizations using tsbox and plotly"
+      "Load and transform time series data with format conversion support"
     ),
-    category = c("data", "transform", "plot"),
+    category = c("data"),
     package = utils::packageName(),
     overwrite = TRUE
   )
