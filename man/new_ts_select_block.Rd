@@ -4,27 +4,18 @@
 \alias{new_ts_select_block}
 \title{Time Series Selection Block}
 \usage{
-new_ts_select_block(series = NULL, pattern = NULL, ...)
+new_ts_select_block(series = NULL, ...)
 }
 \arguments{
-\item{series}{Character vector of series names to select (default: NULL)}
-
-\item{pattern}{Regular expression pattern to match series names (default: NULL)}
+\item{series}{Character vector of series names to select (default: NULL selects all)}
 
 \item{...}{Additional arguments passed to new_ts_transform_block}
 }
 \description{
 A transform block that selects specific series from multivariate time series data.
-Supports both explicit series selection and pattern-based filtering.
 }
 \details{
 This block uses tsbox::ts_pick() to select specific series from multivariate
-time series data. You can either:
-\itemize{
-\item Explicitly select series by name (e.g., c("DAX", "FTSE"))
-\item Use a regex pattern to match series names (e.g., "^D.*" for all series starting with D)
-}
-
-If both series and pattern are NULL, all series are returned.
-If both are provided, series takes precedence.
+time series data by explicitly selecting series by name.
+If series is NULL or empty, all available series are selected.
 }

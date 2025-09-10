@@ -19,11 +19,19 @@ new_ts_bind_block <- function(...) {
   # Capture the input data
   dots <- list(...)
 
+  # Check if data is provided and valid (not just names)
+  has_valid_data <- length(dots) > 0 && 
+                    !all(sapply(dots, is.character)) &&
+                    !all(sapply(dots, is.null))
+
   # If data is provided, combine it
-  if (length(dots) > 0) {
+  if (has_valid_data) {
     # Convert each input to tibble format
     data_list <- lapply(seq_along(dots), function(i) {
       d <- dots[[i]]
+      # Skip non-data elements
+      if (is.character(d) || is.null(d)) return(NULL)
+      
       tbl <- tsbox::ts_tbl(d)
       # Use the argument name as the series ID if available
       nm <- names(dots)[i]
@@ -36,13 +44,24 @@ new_ts_bind_block <- function(...) {
       }
       tbl
     })
-
-    # Combine all series
-    combined_data <- if (length(data_list) == 1) {
-      data_list[[1]]
+    
+    # Remove NULL entries
+    data_list <- data_list[!sapply(data_list, is.null)]
+    
+    # Only combine if we have valid data
+    if (length(data_list) == 0) {
+      has_valid_data <- FALSE
     } else {
-      do.call(tsbox::ts_c, data_list)
+      # Combine all series
+      combined_data <- if (length(data_list) == 1) {
+        data_list[[1]]
+      } else {
+        do.call(tsbox::ts_c, data_list)
+      }
     }
+  }
+  
+  if (has_valid_data) {
 
     # Return a data block with the combined data
     new_ts_data_block(
