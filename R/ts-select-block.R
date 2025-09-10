@@ -12,13 +12,11 @@
 #'
 #' @export
 new_ts_select_block <- function(series = NULL, ...) {
-  
   new_ts_transform_block(
     function(id, data) {
       moduleServer(
         id,
         function(input, output, session) {
-          
           # Get available series from data
           available_series <- reactive({
             # Handle both reactive and non-reactive data
@@ -29,9 +27,11 @@ new_ts_select_block <- function(series = NULL, ...) {
             } else {
               return(character(0))
             }
-            
-            if (is.null(data_val)) return(character(0))
-            
+
+            if (is.null(data_val)) {
+              return(character(0))
+            }
+
             # The data comes as a data.frame directly in transform blocks
             df <- if (is.data.frame(data_val)) {
               data_val
@@ -40,39 +40,41 @@ new_ts_select_block <- function(series = NULL, ...) {
             } else {
               return(character(0))
             }
-            
+
             # Check for multivariate series
             if ("id" %in% names(df)) {
               unique(as.character(df$id))
             } else {
-              character(0)  # Univariate series - no selection needed
+              character(0) # Univariate series - no selection needed
             }
           })
-          
+
           # Initialize reactive value for series selection
           # Start with the constructor parameter or NULL
           r_series <- reactiveVal(series)
-          
+
           # Update available series in UI
           observe({
             choices <- available_series()
             if (length(choices) > 0) {
               # Clean up series names for display
               display_names <- gsub("^datasets::", "", choices)
-              
+
               # Determine what should be selected
               current_selection <- isolate(r_series())
-              
+
               # If no selection or invalid selection, select all
-              if (is.null(current_selection) || 
+              if (
+                is.null(current_selection) ||
                   length(current_selection) == 0 ||
-                  !all(current_selection %in% choices)) {
-                selected_val <- choices  # Select all by default
-                r_series(selected_val)  # Update reactive value
+                  !all(current_selection %in% choices)
+              ) {
+                selected_val <- choices # Select all by default
+                r_series(selected_val) # Update reactive value
               } else {
                 selected_val <- current_selection
               }
-              
+
               # Update select input with available series
               updateSelectInput(
                 session,
@@ -91,7 +93,7 @@ new_ts_select_block <- function(series = NULL, ...) {
               r_series(NULL)
             }
           })
-          
+
           # Show warning for univariate data
           output$univariate_warning <- renderUI({
             choices <- available_series()
@@ -102,7 +104,7 @@ new_ts_select_block <- function(series = NULL, ...) {
               } else {
                 !is.null(data)
               }
-              
+
               if (has_data) {
                 tags$div(
                   class = "alert alert-warning",
@@ -110,7 +112,9 @@ new_ts_select_block <- function(series = NULL, ...) {
                   icon("info-circle"),
                   "This is univariate time series data. Series selection is only available for multivariate data.",
                   tags$br(),
-                  tags$small("Try with a multivariate dataset like EuStockMarkets or Seatbelts.")
+                  tags$small(
+                    "Try with a multivariate dataset like EuStockMarkets or Seatbelts."
+                  )
                 )
               } else {
                 NULL
@@ -119,29 +123,44 @@ new_ts_select_block <- function(series = NULL, ...) {
               NULL
             }
           })
-          
+
           # Observer for series selection - simple and direct
-          observeEvent(input$series, {
-            r_series(input$series)
-          }, ignoreNULL = FALSE, ignoreInit = TRUE)
-          
+          observeEvent(
+            input$series,
+            {
+              r_series(input$series)
+            },
+            ignoreNULL = FALSE,
+            ignoreInit = TRUE
+          )
+
           # Dynamic description
           output$selection_description <- renderUI({
             selected <- r_series()
             avail <- available_series()
-            
+
             if (length(avail) == 0) {
               return(NULL)
             }
-            
+
             if (!is.null(selected) && length(selected) > 0) {
               # Clean display names
               display_selected <- gsub("^datasets::", "", selected)
               helpText(
                 icon("info-circle"),
-                paste0("Selecting ", length(selected), " of ", length(avail), " series: ", 
-                       paste(display_selected, collapse = ", ")),
-                paste0(" (Available: ", paste(gsub("^datasets::", "", avail), collapse = ", "), ")")
+                paste0(
+                  "Selecting ",
+                  length(selected),
+                  " of ",
+                  length(avail),
+                  " series: ",
+                  paste(display_selected, collapse = ", ")
+                ),
+                paste0(
+                  " (Available: ",
+                  paste(gsub("^datasets::", "", avail), collapse = ", "),
+                  ")"
+                )
               )
             } else {
               helpText(
@@ -150,29 +169,35 @@ new_ts_select_block <- function(series = NULL, ...) {
               )
             }
           })
-          
+
           list(
             expr = reactive({
               # Get current selection
               series_val <- r_series()
               avail <- available_series()
-              
+
               # For multivariate data, always use ts_pick
               if (length(avail) > 0) {
                 # Use selected series or all available if none selected
-                selected_series <- if (!is.null(series_val) && length(series_val) > 0) {
+                selected_series <- if (
+                  !is.null(series_val) && length(series_val) > 0
+                ) {
                   series_val
                 } else {
-                  avail  # Select all if nothing selected
+                  avail # Select all if nothing selected
                 }
-                
-                series_str <- paste0('c(', paste0('"', selected_series, '"', collapse = ", "), ')')
+
+                series_str <- paste0(
+                  'c(',
+                  paste0('"', selected_series, '"', collapse = ", "),
+                  ')'
+                )
                 expr_text <- glue::glue('tsbox::ts_pick(data, {series_str})')
               } else {
                 # Univariate data - return as is
                 expr_text <- "data"
               }
-              
+
               parse(text = expr_text)[[1]]
             }),
             state = list(
@@ -230,38 +255,38 @@ new_ts_select_block <- function(series = NULL, ...) {
           }
           "
         )),
-        
+
         div(
           class = "ts-block-container",
-          
+
           div(
             class = "ts-block-form-grid",
-            
+
             # Series Selection Section
             div(
               class = "ts-block-section",
               tags$h4("Series Selection"),
-              
+
               # Series multi-select
               div(
                 class = "ts-block-input-wrapper",
                 selectInput(
                   NS(id, "series"),
                   label = "Select Series",
-                  choices = NULL,  # Will be populated dynamically
+                  choices = NULL, # Will be populated dynamically
                   selected = series,
                   multiple = TRUE,
                   width = "100%"
                 )
               )
             ),
-            
+
             # Dynamic description
             div(
               class = "ts-block-help-text",
               uiOutput(NS(id, "selection_description"))
             ),
-            
+
             # Warning for univariate data
             uiOutput(NS(id, "univariate_warning"))
           )
@@ -271,10 +296,12 @@ new_ts_select_block <- function(series = NULL, ...) {
     dat_val = function(data) {
       # Validate that input is a data.frame
       stopifnot(is.data.frame(data))
-      
+
       # Warn if data appears to be univariate
       if (!"id" %in% names(data)) {
-        warning("Data appears to be univariate (no 'id' column). Selection block works best with multivariate time series.")
+        warning(
+          "Data appears to be univariate (no 'id' column). Selection block works best with multivariate time series."
+        )
       }
     },
     class = "ts_select_block",

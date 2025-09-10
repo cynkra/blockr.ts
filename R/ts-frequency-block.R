@@ -26,23 +26,29 @@
 #' (e.g., yearly to monthly), data is disaggregated using interpolation.
 #'
 #' @export
-new_ts_frequency_block <- function(to = "year", aggregate = "mean", na.rm = TRUE, ...) {
-  
+new_ts_frequency_block <- function(
+  to = "year",
+  aggregate = "mean",
+  na.rm = TRUE,
+  ...
+) {
   # Validate parameters
   to <- match.arg(to, c("year", "quarter", "month", "week", "day"))
-  aggregate <- match.arg(aggregate, c("mean", "sum", "first", "last", "min", "max"))
-  
+  aggregate <- match.arg(
+    aggregate,
+    c("mean", "sum", "first", "last", "min", "max")
+  )
+
   new_ts_transform_block(
     function(id, data) {
       moduleServer(
         id,
         function(input, output, session) {
-          
           # Reactive values for parameters
           r_to <- reactiveVal(to)
           r_aggregate <- reactiveVal(aggregate)
           r_na_rm <- reactiveVal(na.rm)
-          
+
           # Detect input data frequency
           input_frequency <- reactive({
             # Handle both reactive and non-reactive data
@@ -53,10 +59,12 @@ new_ts_frequency_block <- function(to = "year", aggregate = "mean", na.rm = TRUE
             } else {
               return(NULL)
             }
-            
+
             # Check if we have valid data structure
-            if (is.null(data_val)) return(NULL)
-            
+            if (is.null(data_val)) {
+              return(NULL)
+            }
+
             # The data comes as a data.frame directly in transform blocks
             df <- if (is.data.frame(data_val)) {
               data_val
@@ -65,47 +73,50 @@ new_ts_frequency_block <- function(to = "year", aggregate = "mean", na.rm = TRUE
             } else {
               return(NULL)
             }
-            
+
             # Try to detect frequency from the data
-            tryCatch({
-              # Convert back to ts object to get frequency
-              ts_obj <- tsbox::ts_ts(df)
-              freq <- frequency(ts_obj)
-              
-              # Map numeric frequency to string
-              freq_map <- list(
-                "365" = "day",
-                "260" = "day",
-                "52" = "week",
-                "12" = "month",
-                "4" = "quarter",
-                "1" = "year"
-              )
-              
-              # Return mapped frequency or NULL if unknown
-              freq_str <- as.character(freq)
-              if (freq_str %in% names(freq_map)) {
-                freq_map[[freq_str]]
-              } else if (freq >= 365) {
-                "day"
-              } else if (freq >= 52) {
-                "week"
-              } else if (freq >= 12) {
-                "month"
-              } else if (freq >= 4) {
-                "quarter"
-              } else {
-                "year"
+            tryCatch(
+              {
+                # Convert back to ts object to get frequency
+                ts_obj <- tsbox::ts_ts(df)
+                freq <- frequency(ts_obj)
+
+                # Map numeric frequency to string
+                freq_map <- list(
+                  "365" = "day",
+                  "260" = "day",
+                  "52" = "week",
+                  "12" = "month",
+                  "4" = "quarter",
+                  "1" = "year"
+                )
+
+                # Return mapped frequency or NULL if unknown
+                freq_str <- as.character(freq)
+                if (freq_str %in% names(freq_map)) {
+                  freq_map[[freq_str]]
+                } else if (freq >= 365) {
+                  "day"
+                } else if (freq >= 52) {
+                  "week"
+                } else if (freq >= 12) {
+                  "month"
+                } else if (freq >= 4) {
+                  "quarter"
+                } else {
+                  "year"
+                }
+              },
+              error = function(e) {
+                NULL
               }
-            }, error = function(e) {
-              NULL
-            })
+            )
           })
-          
+
           # Render the frequency selector dynamically
           output$to_selector <- renderUI({
             current_freq <- input_frequency()
-            
+
             # Default choices if no data yet
             all_choices <- c(
               "Yearly" = "year",
@@ -114,30 +125,32 @@ new_ts_frequency_block <- function(to = "year", aggregate = "mean", na.rm = TRUE
               "Weekly" = "week",
               "Daily" = "day"
             )
-            
+
             if (!is.null(current_freq)) {
               # Define frequency hierarchy (from highest to lowest)
               freq_hierarchy <- c("day", "week", "month", "quarter", "year")
               current_idx <- which(freq_hierarchy == current_freq)
-              
+
               if (length(current_idx) > 0) {
                 # Only allow frequencies at or lower than current
-                valid_freqs <- freq_hierarchy[current_idx:length(freq_hierarchy)]
-                
+                valid_freqs <- freq_hierarchy[
+                  current_idx:length(freq_hierarchy)
+                ]
+
                 # Create choice list with proper labels
                 choice_labels <- c(
                   "day" = "Daily",
-                  "week" = "Weekly", 
+                  "week" = "Weekly",
                   "month" = "Monthly",
                   "quarter" = "Quarterly",
                   "year" = "Yearly"
                 )
-                
+
                 filtered_choices <- setNames(
                   valid_freqs,
                   choice_labels[valid_freqs]
                 )
-                
+
                 # Determine what should be selected
                 current_selection <- isolate(r_to())
                 new_selection <- if (current_selection %in% valid_freqs) {
@@ -146,7 +159,7 @@ new_ts_frequency_block <- function(to = "year", aggregate = "mean", na.rm = TRUE
                   # Default to lowest frequency (yearly) if current is invalid
                   valid_freqs[length(valid_freqs)]
                 }
-                
+
                 selectInput(
                   NS(session$ns(NULL), "to"),
                   label = "Target Frequency",
@@ -175,13 +188,14 @@ new_ts_frequency_block <- function(to = "year", aggregate = "mean", na.rm = TRUE
               )
             }
           })
-          
+
           # Show current frequency info
           output$current_frequency <- renderUI({
             current_freq <- input_frequency()
-            
+
             if (!is.null(current_freq)) {
-              freq_label <- switch(current_freq,
+              freq_label <- switch(
+                current_freq,
                 "day" = "Daily",
                 "week" = "Weekly",
                 "month" = "Monthly",
@@ -189,47 +203,52 @@ new_ts_frequency_block <- function(to = "year", aggregate = "mean", na.rm = TRUE
                 "year" = "Yearly",
                 "Unknown"
               )
-              
+
               tags$div(
                 class = "alert alert-info",
                 style = "padding: 8px; margin-bottom: 10px; font-size: 0.9em; background-color: #d1ecf1; border: 1px solid #bee5eb;",
                 icon("info-circle"),
                 tags$strong(paste0("Current data frequency: ", freq_label)),
                 tags$br(),
-                tags$small(style = "color: #666;", "Only lower frequencies available for aggregation")
+                tags$small(
+                  style = "color: #666;",
+                  "Only lower frequencies available for aggregation"
+                )
               )
             } else {
-              NULL  # Don't show anything if no frequency detected
+              NULL # Don't show anything if no frequency detected
             }
           })
-          
+
           # Observers for inputs
           observeEvent(input$to, {
             r_to(input$to)
           })
-          
+
           observeEvent(input$aggregate, {
             r_aggregate(input$aggregate)
           })
-          
+
           observeEvent(input$na_rm, {
             r_na_rm(input$na_rm)
           })
-          
+
           # Dynamic description based on settings
           output$frequency_description <- renderUI({
             current_to <- r_to()
             current_agg <- r_aggregate()
-            
-            freq_desc <- switch(current_to,
+
+            freq_desc <- switch(
+              current_to,
               "year" = "yearly",
               "quarter" = "quarterly",
               "month" = "monthly",
               "week" = "weekly",
               "day" = "daily"
             )
-            
-            agg_desc <- switch(current_agg,
+
+            agg_desc <- switch(
+              current_agg,
               "mean" = "averaging",
               "sum" = "summing",
               "first" = "taking first value of",
@@ -237,20 +256,26 @@ new_ts_frequency_block <- function(to = "year", aggregate = "mean", na.rm = TRUE
               "min" = "taking minimum of",
               "max" = "taking maximum of"
             )
-            
+
             helpText(
               icon("info-circle"),
-              paste0("Converting to ", freq_desc, " frequency by ", agg_desc, " each period")
+              paste0(
+                "Converting to ",
+                freq_desc,
+                " frequency by ",
+                agg_desc,
+                " each period"
+              )
             )
           })
-          
+
           list(
             expr = reactive({
               # Build expression based on selected parameters
               to_val <- r_to()
               aggregate_val <- r_aggregate()
               na_rm_val <- r_na_rm()
-              
+
               # Create expression using glue
               expr_text <- glue::glue(
                 'tsbox::ts_frequency(data, to = "{to_val}", aggregate = "{aggregate_val}", na.rm = {na_rm_val})'
@@ -315,30 +340,30 @@ new_ts_frequency_block <- function(to = "year", aggregate = "mean", na.rm = TRUE
           }
           "
         )),
-        
+
         div(
           class = "ts-block-container",
-          
+
           # Show current frequency info at the top
           uiOutput(NS(id, "current_frequency")),
-          
+
           div(
             class = "ts-block-form-grid",
-            
+
             # Frequency Section
             div(
               class = "ts-block-section",
               tags$h4("Frequency Conversion"),
-              
+
               div(
                 class = "ts-block-section-grid",
-                
+
                 div(
                   class = "ts-block-input-wrapper",
                   # Render select input dynamically based on data frequency
                   uiOutput(NS(id, "to_selector"))
                 ),
-                
+
                 div(
                   class = "ts-block-input-wrapper",
                   selectInput(
@@ -358,15 +383,15 @@ new_ts_frequency_block <- function(to = "year", aggregate = "mean", na.rm = TRUE
                 )
               )
             ),
-            
+
             # Options Section
             div(
               class = "ts-block-section",
               tags$h4("Options"),
-              
+
               div(
                 class = "ts-block-section-grid",
-                
+
                 div(
                   class = "ts-block-input-wrapper",
                   checkboxInput(
@@ -378,7 +403,7 @@ new_ts_frequency_block <- function(to = "year", aggregate = "mean", na.rm = TRUE
                 )
               )
             ),
-            
+
             # Dynamic description
             div(
               class = "ts-block-help-text",

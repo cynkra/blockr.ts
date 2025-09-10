@@ -15,28 +15,26 @@
 #'
 #' @export
 new_ts_lag_block <- function(by = 1L, ...) {
-  
   # Ensure by is an integer
   by <- as.integer(by)
-  
+
   new_ts_transform_block(
     function(id, data) {
       moduleServer(
         id,
         function(input, output, session) {
-          
           # Reactive value for lag parameter
           r_by <- reactiveVal(by)
-          
+
           # Observer for input
           observeEvent(input$by, {
             r_by(as.integer(input$by))
           })
-          
+
           # Dynamic description based on lag value
           output$lag_description <- renderUI({
             current_by <- r_by()
-            
+
             if (current_by == 0) {
               helpText(
                 icon("info-circle"),
@@ -46,21 +44,33 @@ new_ts_lag_block <- function(by = 1L, ...) {
               period_text <- if (abs(current_by) == 1) "period" else "periods"
               helpText(
                 icon("arrow-right"),
-                paste0("Shifting data forward by ", abs(current_by), " ", period_text, " (lag)")
+                paste0(
+                  "Shifting data forward by ",
+                  abs(current_by),
+                  " ",
+                  period_text,
+                  " (lag)"
+                )
               )
             } else {
               period_text <- if (abs(current_by) == 1) "period" else "periods"
               helpText(
                 icon("arrow-left"),
-                paste0("Shifting data backward by ", abs(current_by), " ", period_text, " (lead)")
+                paste0(
+                  "Shifting data backward by ",
+                  abs(current_by),
+                  " ",
+                  period_text,
+                  " (lead)"
+                )
               )
             }
           })
-          
+
           list(
             expr = reactive({
               by_val <- r_by()
-              
+
               # Create expression using glue
               expr_text <- glue::glue(
                 'tsbox::ts_lag(data, by = {by_val}L)'
@@ -133,10 +143,10 @@ new_ts_lag_block <- function(by = 1L, ...) {
           }
           "
         )),
-        
+
         div(
           class = "ts-block-container",
-          
+
           # Info box
           div(
             class = "ts-block-info-box",
@@ -148,18 +158,18 @@ new_ts_lag_block <- function(by = 1L, ...) {
               "negative values create leads (shift backward)"
             )
           ),
-          
+
           div(
             class = "ts-block-form-grid",
-            
+
             # Lag/Lead Section
             div(
               class = "ts-block-section",
               tags$h4("Time Shift"),
-              
+
               div(
                 class = "ts-block-section-grid",
-                
+
                 div(
                   class = "ts-block-input-wrapper",
                   numericInput(
@@ -172,7 +182,7 @@ new_ts_lag_block <- function(by = 1L, ...) {
                 )
               )
             ),
-            
+
             # Dynamic description
             div(
               class = "ts-block-help-text",

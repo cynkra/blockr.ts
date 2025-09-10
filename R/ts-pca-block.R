@@ -9,39 +9,40 @@
 #' @return A ts_pca_block object
 #' @export
 new_ts_pca_block <- function(n_components = 2, standardize = TRUE, ...) {
-  
   # Ensure n_components is an integer
   n_components <- as.integer(n_components)
-  
+
   new_ts_transform_block(
     function(id, data) {
       moduleServer(
         id,
         function(input, output, session) {
-          
           # Reactive values
           r_n_components <- reactiveVal(n_components)
           r_standardize <- reactiveVal(standardize)
-          
+
           # Observers
           observeEvent(input$n_components, {
             r_n_components(as.integer(input$n_components))
           })
-          
+
           observeEvent(input$standardize, {
             r_standardize(input$standardize)
           })
-          
+
           # Dynamic info text
           output$pca_info <- renderUI({
             n_comp <- r_n_components()
             std <- r_standardize()
-            
+
             div(
               helpText(
                 icon("project-diagram"),
-                sprintf("Extracting %d principal component%s",
-                        n_comp, ifelse(n_comp == 1, "", "s"))
+                sprintf(
+                  "Extracting %d principal component%s",
+                  n_comp,
+                  ifelse(n_comp == 1, "", "s")
+                )
               ),
               helpText(
                 class = "text-muted",
@@ -53,17 +54,18 @@ new_ts_pca_block <- function(n_components = 2, standardize = TRUE, ...) {
               )
             )
           })
-          
+
           list(
             expr = reactive({
               n_comp <- r_n_components()
               std <- r_standardize()
-              
+
               # Use ts_prcomp for PCA
-              # Note: ts_prcomp doesn't properly support scale parameter, 
+              # Note: ts_prcomp doesn't properly support scale parameter,
               # so we standardize manually if needed
               if (std) {
-                expr_text <- glue::glue("
+                expr_text <- glue::glue(
+                  "
                 {{
                   # Standardize data manually before PCA
                   data_std <- tsbox::ts_scale(data)
@@ -77,9 +79,11 @@ new_ts_pca_block <- function(n_components = 2, standardize = TRUE, ...) {
                   
                   # Filter to selected components
                   tbl_result[tbl_result$id %in% components, ]
-                }}")
+                }}"
+                )
               } else {
-                expr_text <- glue::glue("
+                expr_text <- glue::glue(
+                  "
                 {{
                   # Perform PCA without standardization
                   pca_result <- tsbox::ts_prcomp(data)
@@ -90,9 +94,10 @@ new_ts_pca_block <- function(n_components = 2, standardize = TRUE, ...) {
                   
                   # Filter to selected components
                   tbl_result[tbl_result$id %in% components, ]
-                }}")
+                }}"
+                )
               }
-              
+
               parse(text = expr_text)[[1]]
             }),
             state = list(
@@ -109,11 +114,11 @@ new_ts_pca_block <- function(n_components = 2, standardize = TRUE, ...) {
           class = "ts-block-container",
           div(
             class = "ts-block-form-grid",
-            
+
             div(
               class = "ts-block-section",
               tags$h4("PCA Settings"),
-              
+
               div(
                 class = "ts-block-input-wrapper",
                 numericInput(
@@ -125,7 +130,7 @@ new_ts_pca_block <- function(n_components = 2, standardize = TRUE, ...) {
                   step = 1
                 )
               ),
-              
+
               div(
                 class = "ts-block-input-wrapper",
                 checkboxInput(
@@ -134,12 +139,12 @@ new_ts_pca_block <- function(n_components = 2, standardize = TRUE, ...) {
                   value = standardize
                 )
               ),
-              
+
               div(
                 class = "ts-block-info",
                 uiOutput(NS(id, "pca_info"))
               ),
-              
+
               div(
                 class = "alert alert-info",
                 icon("info-circle"),

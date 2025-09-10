@@ -8,34 +8,34 @@
 #' @return A ts_forecast_block object
 #' @export
 new_ts_forecast_block <- function(horizon = 12, ...) {
-  
   # Ensure horizon is an integer
   horizon <- as.integer(horizon)
-  
+
   new_ts_transform_block(
     function(id, data) {
       moduleServer(
         id,
         function(input, output, session) {
-          
           # Reactive value for horizon
           r_horizon <- reactiveVal(horizon)
-          
+
           # Observer for input
           observeEvent(input$horizon, {
             r_horizon(as.integer(input$horizon))
           })
-          
+
           # Dynamic info text
           output$forecast_info <- renderUI({
             horizon_val <- r_horizon()
-            
+
             div(
               helpText(
                 icon("chart-line"),
-                sprintf("Forecasting %d period%s ahead using exponential smoothing",
-                        horizon_val,
-                        ifelse(horizon_val == 1, "", "s"))
+                sprintf(
+                  "Forecasting %d period%s ahead using exponential smoothing",
+                  horizon_val,
+                  ifelse(horizon_val == 1, "", "s")
+                )
               ),
               helpText(
                 class = "text-muted",
@@ -43,13 +43,15 @@ new_ts_forecast_block <- function(horizon = 12, ...) {
               )
             )
           })
-          
+
           list(
             expr = reactive({
               horizon_val <- r_horizon()
-              
+
               # Simple forecast using ts_forecast
-              expr_text <- glue::glue("tsbox::ts_forecast(data, h = {horizon_val})")
+              expr_text <- glue::glue(
+                "tsbox::ts_forecast(data, h = {horizon_val})"
+              )
               parse(text = expr_text)[[1]]
             }),
             state = list(
@@ -65,11 +67,11 @@ new_ts_forecast_block <- function(horizon = 12, ...) {
           class = "ts-block-container",
           div(
             class = "ts-block-form-grid",
-            
+
             div(
               class = "ts-block-section",
               tags$h4("Forecast Settings"),
-              
+
               div(
                 class = "ts-block-input-wrapper",
                 numericInput(
@@ -81,7 +83,7 @@ new_ts_forecast_block <- function(horizon = 12, ...) {
                   step = 1
                 )
               ),
-              
+
               div(
                 class = "ts-block-info",
                 uiOutput(NS(id, "forecast_info"))

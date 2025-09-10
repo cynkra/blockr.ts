@@ -10,81 +10,87 @@
 #' @return A ts_scale_block object
 #' @export
 new_ts_scale_block <- function(method = "index", base = NULL, ...) {
-  
   # Validate method parameter
   method <- match.arg(method, c("index", "normalize", "minmax"))
-  
+
   new_ts_transform_block(
     function(id, data) {
       moduleServer(
         id,
         function(input, output, session) {
-          
           # Reactive values
           r_method <- reactiveVal(method)
           r_base <- reactiveVal(base)
-          
+
           # Observers
           observeEvent(input$method, {
             r_method(input$method)
           })
-          
+
           observeEvent(input$base_slider, {
             if (!is.null(input$base_slider)) {
               r_base(format(input$base_slider, "%Y-%m-%d"))
             }
           })
-          
+
           # Dynamic base date selector
           output$base_selector <- renderUI({
             method_val <- r_method()
-            
+
             if (method_val == "index") {
               # Get data to determine date range
               data_val <- data()
-              
+
               if (!is.null(data_val)) {
                 # Get date range from data
-                range_info <- tryCatch({
-                  df <- if (is.data.frame(data_val)) {
-                    data_val
-                  } else if (is.list(data_val) && "data" %in% names(data_val)) {
-                    data_val$data
-                  } else {
-                    tsbox::ts_tbl(data_val)
-                  }
-                  
-                  if ("time" %in% names(df)) {
-                    list(
-                      min = min(as.Date(df$time), na.rm = TRUE),
-                      max = max(as.Date(df$time), na.rm = TRUE)
-                    )
-                  } else {
-                    NULL
-                  }
-                }, error = function(e) NULL)
-                
+                range_info <- tryCatch(
+                  {
+                    df <- if (is.data.frame(data_val)) {
+                      data_val
+                    } else if (
+                      is.list(data_val) && "data" %in% names(data_val)
+                    ) {
+                      data_val$data
+                    } else {
+                      tsbox::ts_tbl(data_val)
+                    }
+
+                    if ("time" %in% names(df)) {
+                      list(
+                        min = min(as.Date(df$time), na.rm = TRUE),
+                        max = max(as.Date(df$time), na.rm = TRUE)
+                      )
+                    } else {
+                      NULL
+                    }
+                  },
+                  error = function(e) NULL
+                )
+
                 if (!is.null(range_info)) {
                   # Detect frequency for step size
-                  step_days <- tryCatch({
-                    ts_obj <- tsbox::ts_ts(df)
-                    freq <- frequency(ts_obj)
-                    
-                    if (freq == 1) {
-                      365  # Yearly
-                    } else if (freq == 4) {
-                      91   # Quarterly
-                    } else if (freq == 12) {
-                      30   # Monthly
-                    } else if (freq == 52) {
-                      7    # Weekly
-                    } else if (freq >= 365) {
-                      1    # Daily
-                    } else {
-                      30   # Default to monthly
-                    }
-                  }, error = function(e) 30)
-                  
+                  step_days <- tryCatch(
+                    {
+                      ts_obj <- tsbox::ts_ts(df)
+                      freq <- frequency(ts_obj)
+
+                      if (freq == 1) {
+                        365 # Yearly
+                      } else if (freq == 4) {
+                        91 # Quarterly
+                      } else if (freq == 12) {
+                        30 # Monthly
+                      } else if (freq == 52) {
+                        7 # Weekly
+                      } else if (freq >= 365) {
+                        1 # Daily
+                      } else {
+                        30 # Default to monthly
+                      }
+                    },
+                    error = function(e) 30
+                  )
+
                   # Set initial value
                   initial_base <- if (!is.null(isolate(r_base()))) {
                     as.Date(isolate(r_base()))
@@ -92,7 +98,7 @@ new_ts_scale_block <- function(method = "index", base = NULL, ...) {
                     # Default to middle of the range
                     range_info$min + (range_info$max - range_info$min) / 2
                   }
-                  
+
                   div(
                     class = "ts-block-input-wrapper",
                     tags$label("Base Date for Index"),
@@ -121,13 +127,14 @@ new_ts_scale_block <- function(method = "index", base = NULL, ...) {
               NULL
             }
           })
-          
+
           # Dynamic description
           output$method_description <- renderUI({
             method_val <- r_method()
             base_val <- r_base()
-            
-            description <- switch(method_val,
+
+            description <- switch(
+              method_val,
               "normalize" = "Standardizes data to mean = 0, SD = 1",
               "index" = if (!is.null(base_val)) {
                 paste0("Creates index with ", base_val, " = 100")
@@ -135,27 +142,29 @@ new_ts_scale_block <- function(method = "index", base = NULL, ...) {
                 "Creates index with selected base date = 100"
               },
               "minmax" = "Scales data to range [0, 1]",
-              "Standardizes data to mean = 0, SD = 1"  # Default fallback
+              "Standardizes data to mean = 0, SD = 1" # Default fallback
             )
-            
+
             helpText(
               icon("info-circle"),
               description
             )
           })
-          
+
           list(
             expr = reactive({
               method_val <- r_method()
               base_val <- r_base()
-              
+
               if (method_val == "normalize") {
                 expr_text <- "tsbox::ts_scale(data)"
               } else if (method_val == "index") {
                 if (is.null(base_val) || base_val == "") {
                   expr_text <- "tsbox::ts_index(data)"
                 } else {
-                  expr_text <- glue::glue("tsbox::ts_index(data, base = '{base_val}')")
+                  expr_text <- glue::glue(
+                    "tsbox::ts_index(data, base = '{base_val}')"
+                  )
                 }
               } else if (method_val == "minmax") {
                 expr_text <- "
@@ -166,7 +175,7 @@ new_ts_scale_block <- function(method = "index", base = NULL, ...) {
                   data_tbl
                 }"
               }
-              
+
               parse(text = expr_text)[[1]]
             }),
             state = list(
@@ -180,7 +189,8 @@ new_ts_scale_block <- function(method = "index", base = NULL, ...) {
     function(id) {
       tagList(
         # Add responsive CSS
-        tags$style(HTML("
+        tags$style(HTML(
+          "
           .ts-block-container {
             width: 100%;
             margin: 0px;
@@ -213,17 +223,18 @@ new_ts_scale_block <- function(method = "index", base = NULL, ...) {
             border-radius: 4px;
             margin-top: 5px;
           }
-        ")),
-        
+        "
+        )),
+
         div(
           class = "ts-block-container",
           div(
             class = "ts-block-form-grid",
-            
+
             div(
               class = "ts-block-section",
               tags$h4("Scaling Method"),
-              
+
               div(
                 class = "ts-block-input-wrapper",
                 selectInput(
@@ -237,10 +248,10 @@ new_ts_scale_block <- function(method = "index", base = NULL, ...) {
                   selected = method
                 )
               ),
-              
+
               # Dynamic UI for base date selection
               uiOutput(NS(id, "base_selector")),
-              
+
               div(
                 class = "ts-block-info",
                 uiOutput(NS(id, "method_description"))

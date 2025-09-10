@@ -2,12 +2,12 @@
 #'
 #' Combine multiple time series into a single multivariate time series
 #'
-#' @param ... Named time series data to combine. Each argument should be a 
+#' @param ... Named time series data to combine. Each argument should be a
 #'   time series that can be converted to tsbox format.
 #'
 #' @details
 #' This block uses tsbox::ts_c() to combine multiple univariate or multivariate
-#' time series into a single multivariate series. Each input series becomes a 
+#' time series into a single multivariate series. Each input series becomes a
 #' separate series in the output, identified by the 'id' column.
 #'
 #' You can pass multiple time series as named arguments:
@@ -16,10 +16,9 @@
 #' @return A ts_bind_block object
 #' @export
 new_ts_bind_block <- function(...) {
-  
   # Capture the input data
   dots <- list(...)
-  
+
   # If data is provided, combine it
   if (length(dots) > 0) {
     # Convert each input to tibble format
@@ -37,14 +36,14 @@ new_ts_bind_block <- function(...) {
       }
       tbl
     })
-    
+
     # Combine all series
     combined_data <- if (length(data_list) == 1) {
       data_list[[1]]
     } else {
       do.call(tsbox::ts_c, data_list)
     }
-    
+
     # Return a data block with the combined data
     new_ts_data_block(
       server = function(id, data) {
@@ -72,7 +71,11 @@ new_ts_bind_block <- function(...) {
               style = "margin: 15px;",
               helpText(
                 icon("layer-group"),
-                paste0("Combined ", length(unique(local_data$id)), " time series")
+                paste0(
+                  "Combined ",
+                  length(unique(local_data$id)),
+                  " time series"
+                )
               ),
               helpText(
                 class = "text-muted",

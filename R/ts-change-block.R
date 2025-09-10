@@ -21,29 +21,28 @@
 #'
 #' @export
 new_ts_change_block <- function(method = "pc", ...) {
-  
   # Validate method parameter
   method <- match.arg(method, c("pc", "pcy", "pca", "diff", "diffy"))
-  
+
   new_ts_transform_block(
     function(id, data) {
       moduleServer(
         id,
         function(input, output, session) {
-          
           # Reactive value for method selection
           r_method <- reactiveVal(method)
-          
+
           # Observer for method input
           observeEvent(input$method, {
             r_method(input$method)
           })
-          
+
           # Dynamic description based on method
           output$method_description <- renderUI({
             current_method <- r_method()
-            
-            desc <- switch(current_method,
+
+            desc <- switch(
+              current_method,
               "pc" = "Calculating period-on-period percentage change (e.g., month-to-month)",
               "pcy" = "Calculating year-on-year percentage change (same period last year)",
               "pca" = "Calculating annualized percentage change rate",
@@ -51,27 +50,28 @@ new_ts_change_block <- function(method = "pc", ...) {
               "diffy" = "Calculating year-on-year differences (absolute change from same period last year)",
               "Unknown method"
             )
-            
+
             helpText(
               icon("info-circle"),
               desc
             )
           })
-          
+
           list(
             expr = reactive({
               # Build expression based on selected method
               selected_method <- r_method()
-              
+
               # Map method to tsbox function
-              func_name <- switch(selected_method,
+              func_name <- switch(
+                selected_method,
                 "pc" = "ts_pc",
                 "pcy" = "ts_pcy",
                 "pca" = "ts_pca",
                 "diff" = "ts_diff",
                 "diffy" = "ts_diffy"
               )
-              
+
               # Create expression
               expr_text <- glue::glue("tsbox::{func_name}(data)")
               parse(text = expr_text)[[1]]
@@ -132,21 +132,21 @@ new_ts_change_block <- function(method = "pc", ...) {
           }
           "
         )),
-        
+
         div(
           class = "ts-block-container",
-          
+
           div(
             class = "ts-block-form-grid",
-            
+
             # Calculation Section
             div(
               class = "ts-block-section",
               tags$h4("Calculation"),
-              
+
               div(
                 class = "ts-block-section-grid",
-                
+
                 div(
                   class = "ts-block-input-wrapper",
                   selectInput(
@@ -164,7 +164,7 @@ new_ts_change_block <- function(method = "pc", ...) {
                   )
                 )
               ),
-              
+
               # Dynamic description
               div(
                 class = "ts-block-help-text",

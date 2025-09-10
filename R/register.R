@@ -5,13 +5,34 @@
 #' @export
 register_ts_blocks <- function() {
   blockr.core::register_blocks(
-    c("new_ts_airpassenger_block", "new_ts_dataset_block", "new_ts_change_block", 
-      "new_ts_frequency_block", "new_ts_select_block", "new_ts_lag_block", "new_ts_span_block",
-      "new_ts_scale_block", "new_ts_forecast_block", "new_ts_decompose_block", "new_ts_pca_block",
-      "new_ts_bind_block"),
-    name = c("AirPassengers Time Series", "Time Series Dataset Selector", "Time Series Changes", 
-             "Frequency Conversion", "Series Selection", "Lag/Lead Transform", "Time Range Selection",
-             "Scale & Index", "Forecast", "Decomposition", "PCA", "Bind Series"),
+    c(
+      "new_ts_airpassenger_block",
+      "new_ts_dataset_block",
+      "new_ts_change_block",
+      "new_ts_frequency_block",
+      "new_ts_select_block",
+      "new_ts_lag_block",
+      "new_ts_span_block",
+      "new_ts_scale_block",
+      "new_ts_forecast_block",
+      "new_ts_decompose_block",
+      "new_ts_pca_block",
+      "new_ts_bind_block"
+    ),
+    name = c(
+      "AirPassengers Time Series",
+      "Time Series Dataset Selector",
+      "Time Series Changes",
+      "Frequency Conversion",
+      "Series Selection",
+      "Lag/Lead Transform",
+      "Time Range Selection",
+      "Scale & Index",
+      "Forecast",
+      "Decomposition",
+      "PCA",
+      "Bind Series"
+    ),
     description = c(
       "Display AirPassengers time series as an interactive dygraph",
       "Select and display any built-in R time series dataset",
@@ -26,8 +47,20 @@ register_ts_blocks <- function() {
       "Principal component analysis for multivariate series",
       "Combine multiple time series into one multivariate series"
     ),
-    category = c("data", "data", "transform", "transform", "transform", "transform", "transform",
-                 "transform", "transform", "transform", "transform", "transform"),
+    category = c(
+      "data",
+      "data",
+      "transform",
+      "transform",
+      "transform",
+      "transform",
+      "transform",
+      "transform",
+      "transform",
+      "transform",
+      "transform",
+      "transform"
+    ),
     package = utils::packageName(),
     overwrite = TRUE
   )
