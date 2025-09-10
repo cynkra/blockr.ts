@@ -59,11 +59,6 @@ block_output.ts_block <- function(x, result, session) {
       return(NULL)
     }
     
-    # Use tsbox::ts_dygraphs to create the dygraph
-    # ts_dygraphs automatically uses tsbox colors
-    dygraph <- tsbox::ts_dygraphs(result)
-    
-    # Add nice styling with tsbox colors
     # Get number of series to determine how many colors we need
     n_series <- if ("id" %in% names(result)) {
       length(unique(result$id))
@@ -74,10 +69,17 @@ block_output.ts_block <- function(x, result, session) {
     # Use tsbox colors palette
     colors_to_use <- tsbox::colors_tsbox()[seq_len(n_series)]
     
+    # Create dygraph without calling ts_dygraphs first to avoid color conflict
+    # Convert to xts directly
+    ts_data <- tsbox::ts_xts(result)
+    dygraph <- dygraphs::dygraph(ts_data)
+    
+    # Apply styling with proper colors and thicker lines
     dygraph <- dygraphs::dyOptions(dygraph, 
                                     fillGraph = FALSE, 
                                     drawGrid = TRUE,
-                                    colors = colors_to_use)
+                                    colors = colors_to_use,
+                                    strokeWidth = 2.5)
     dygraph <- dygraphs::dyRangeSelector(dygraph, height = 20)
     
     dygraph
