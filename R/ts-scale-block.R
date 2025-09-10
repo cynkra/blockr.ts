@@ -1,0 +1,171 @@
+#' Time Series Scaling and Indexing Block
+#'
+#' Scale, normalize, or create indices from time series data
+#'
+#' @param method Character string. Transformation method: "normalize" (z-score),
+#'   "index" (base 100), or "minmax" (0-1 range).
+#' @param base Date string. Base date for indexing (only used when method = "index").
+#' @param ... Additional arguments passed to new_ts_transform_block()
+#'
+#' @return A ts_scale_block object
+#' @export
+new_ts_scale_block <- function(method = "normalize", base = NULL, ...) {
+  
+  # Validate method parameter
+  method <- match.arg(method, c("normalize", "index", "minmax"))
+  
+  new_ts_transform_block(
+    function(id, data) {
+      moduleServer(
+        id,
+        function(input, output, session) {
+          
+          # Reactive values
+          r_method <- reactiveVal(method)
+          r_base <- reactiveVal(base)
+          
+          # Observers
+          observeEvent(input$method, {
+            r_method(input$method)
+          })
+          
+          observeEvent(input$base, {
+            r_base(input$base)
+          })
+          
+          # Dynamic description
+          output$method_description <- renderUI({
+            method_val <- r_method()
+            
+            description <- switch(method_val,
+              "normalize" = "Standardizes data to mean = 0, SD = 1",
+              "index" = "Creates index with base date = 100",
+              "minmax" = "Scales data to range [0, 1]",
+              ""
+            )
+            
+            helpText(
+              icon("info-circle"),
+              description
+            )
+          })
+          
+          list(
+            expr = reactive({
+              method_val <- r_method()
+              base_val <- r_base()
+              
+              if (method_val == "normalize") {
+                expr_text <- "tsbox::ts_scale(data)"
+              } else if (method_val == "index") {
+                if (is.null(base_val) || base_val == "") {
+                  expr_text <- "tsbox::ts_index(data)"
+                } else {
+                  expr_text <- glue::glue("tsbox::ts_index(data, base = '{base_val}')")
+                }
+              } else if (method_val == "minmax") {
+                expr_text <- "
+                {
+                  data_tbl <- tsbox::ts_tbl(data)
+                  data_tbl$value <- (data_tbl$value - min(data_tbl$value, na.rm = TRUE)) / 
+                                   (max(data_tbl$value, na.rm = TRUE) - min(data_tbl$value, na.rm = TRUE))
+                  data_tbl
+                }"
+              }
+              
+              parse(text = expr_text)[[1]]
+            }),
+            state = list(
+              method = r_method,
+              base = r_base
+            )
+          )
+        }
+      )
+    },
+    function(id) {
+      tagList(
+        # Add responsive CSS
+        tags$style(HTML("
+          .ts-block-container {
+            width: 100%;
+            margin: 0px;
+            padding-bottom: 15px;
+          }
+          
+          .ts-block-form-grid {
+            display: grid;
+            gap: 15px;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+          }
+          
+          .ts-block-section h4 {
+            grid-column: 1 / -1;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #333;
+          }
+          
+          .ts-block-input-wrapper {
+            display: flex;
+            flex-direction: column;
+          }
+          
+          .ts-block-info {
+            grid-column: 1 / -1;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            margin-top: 5px;
+          }
+        ")),
+        
+        div(
+          class = "ts-block-container",
+          div(
+            class = "ts-block-form-grid",
+            
+            div(
+              class = "ts-block-section",
+              tags$h4("Scaling Method"),
+              
+              div(
+                class = "ts-block-input-wrapper",
+                selectInput(
+                  NS(id, "method"),
+                  label = NULL,
+                  choices = list(
+                    "Normalize (Z-score)" = "normalize",
+                    "Index (Base 100)" = "index",
+                    "Min-Max (0-1)" = "minmax"
+                  ),
+                  selected = method
+                )
+              ),
+              
+              conditionalPanel(
+                condition = sprintf("input['%s'] == 'index'", NS(id, "method")),
+                div(
+                  class = "ts-block-input-wrapper",
+                  textInput(
+                    NS(id, "base"),
+                    label = "Base Date",
+                    value = base %||% "2020-01-01",
+                    placeholder = "YYYY-MM-DD"
+                  )
+                )
+              ),
+              
+              div(
+                class = "ts-block-info",
+                uiOutput(NS(id, "method_description"))
+              )
+            )
+          )
+        )
+      )
+    },
+    class = c("ts_scale_block"),
+    ...
+  )
+}

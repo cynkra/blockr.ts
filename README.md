@@ -2,19 +2,28 @@
 
 **Time Series Analysis Blocks for blockr**
 
-Specialized time series functionality for blockr using tsbox and dygraphs. Provides blocks for loading, transforming, and visualizing time series data as interactive dygraphs.
+Specialized time series functionality for blockr using tsbox and dygraphs. Provides comprehensive blocks for loading, transforming, and visualizing time series data as interactive dygraphs.
+
+## Features
+
+- 📊 **Interactive Dygraphs**: All outputs render as interactive time series charts
+- 📦 **25 Built-in Datasets**: Easy access to R's time series datasets
+- 🔄 **Comprehensive Transformations**: Changes, frequency conversion, lag/lead, scaling
+- 📈 **Advanced Analysis**: Forecasting, decomposition, PCA for multivariate series
+- 🎨 **Professional UI**: Consistent design following blockr.ggplot patterns
+- 🎯 **tsbox Integration**: Seamless format conversion and manipulation
 
 ## Installation
 
 ```r
-# Install dependencies first
-install.packages(c("tsbox", "dygraphs", "shiny"))
+# Install dependencies
+install.packages(c("tsbox", "dygraphs", "forecast"))
 
 # Install blockr.core if not already installed
 # remotes::install_github("blockr-org/blockr.core")
 
-# Load the package
-devtools::load_all()
+# Install blockr.ts
+devtools::install()
 ```
 
 ## Quick Start
@@ -23,236 +32,277 @@ devtools::load_all()
 library(blockr.core)
 library(blockr.ts)
 
-# Example 1: Dataset selector
-blockr.core::serve(
-  new_ts_dataset_block()
-)
+# Register blocks with blockr
+register_ts_blocks()
 
-# Example 2: Transform Block
+# Start with a dataset and apply transformations
 blockr.core::serve(
-  new_ts_change_block(),
-  data = list(data = tsbox::ts_tbl(tsbox::ts_c(datasets::mdeaths, datasets::fdeaths)))
-)
-
-# Example 2: Transform Block
-blockr.core::serve(
-  new_ts_frequency_block(),
-  data = list(data = tsbox::ts_tbl(tsbox::ts_c(datasets::mdeaths, datasets::fdeaths)))
-)
-
-# Example 3: Transform Block
-blockr.core::serve(
-  new_ts_select_block(),
-  data = list(data = tsbox::ts_tbl(tsbox::ts_c(datasets::mdeaths, datasets::fdeaths)))
-)
-
-# Example 4: Transform Block
-blockr.core::serve(
-  new_ts_lag_block(),
-  data = list(data = tsbox::ts_tbl(tsbox::ts_c(datasets::mdeaths, datasets::fdeaths)))
-)
-
-# Example 5: Transform Block
-blockr.core::serve(
-  new_ts_span_block(),
-  data = list(data = tsbox::ts_tbl(tsbox::ts_c(datasets::mdeaths, datasets::fdeaths)))
+  new_ts_dataset_block(dataset = "AirPassengers"),
+  new_ts_change_block(method = "pcy")
 )
 ```
 
 ## Available Blocks
 
-This package provides three types of time series blocks:
-
 ### Data Blocks
-- **`new_ts_airpassenger_block()`** - Classic AirPassengers dataset
-- **`new_ts_dataset_block()`** - Access to all 25 built-in R time series datasets
 
-### Transform Blocks
-- **`new_ts_pc_block()`** - Simple percentage change (no parameters)
-- **`new_ts_change_block()`** - Comprehensive change calculations with method selector
+#### `new_ts_airpassenger_block()`
+Classic AirPassengers dataset - a simple starting point for time series analysis.
 
-### Display
-All blocks automatically display results as interactive dygraphs with:
-- Pan and zoom capabilities
-- Range selector
-- Hover tooltips with exact values
-
-## Block Documentation
-
-### `new_ts_airpassenger_block()`
-
-Simple time series data block that displays the classic AirPassengers dataset.
-
-**Parameters:**
-- None (parameterless block)
-
-**Example:**
 ```r
-# Display AirPassengers data as an interactive dygraph
-blockr.core::serve(
-  new_ts_airpassenger_block()
-)
+blockr.core::serve(new_ts_airpassenger_block())
 ```
 
-### `new_ts_dataset_block()`
+#### `new_ts_dataset_block()`
+Access all 25 built-in R time series datasets with an intuitive selector.
 
-General time series data selector providing access to all 25 built-in R time series datasets.
-
-**Parameters:**
-- `dataset`: Name of the dataset to load (default: "AirPassengers")
-  - 21 univariate series: AirPassengers, Nile, lynx, co2, etc.
-  - 2 multivariate series: EuStockMarkets (4 series), Seatbelts (8 series)
-
-**Features:**
-- Dropdown selector with descriptive names
-- Dynamic info panel showing dataset type and frequency
-- Automatic conversion using `tsbox::ts_tbl()`
-- Handles both univariate and multivariate series
-
-**Example:**
 ```r
-# Select and display any built-in time series
 blockr.core::serve(
   new_ts_dataset_block(dataset = "EuStockMarkets")
 )
-
-# Chain with transformations
-blockr.core::serve(
-  new_ts_dataset_block(dataset = "co2"),
-  new_ts_pc_block()
-)
 ```
 
-### `new_ts_pc_block()`
+### Transform Blocks
 
-Simple transform block that computes percentage changes for time series data.
+#### `new_ts_change_block()`
+Calculate various types of changes: percentage, differences, year-over-year.
 
-**Parameters:**
-- None (applies `tsbox::ts_pc()` directly)
+![Change Block](man/figures/ts_change_block.png)
 
-**Features:**
-- No UI (simplest possible implementation)
-- Calculates percentage change between consecutive observations
-- First value will be NA (no previous value to compare)
-- Works with both univariate and multivariate time series
-
-**Example:**
 ```r
-# Compute percentage changes in a pipeline
 blockr.core::serve(
-  new_ts_dataset_block(dataset = "AirPassengers"),
-  new_ts_pc_block()
-)
-
-# Standalone usage with direct data input
-blockr.core::serve(
-  new_ts_pc_block(),
+  new_ts_change_block(method = "pcy"),
   data = list(data = tsbox::ts_tbl(datasets::AirPassengers))
 )
 ```
 
-### `new_ts_change_block()`
+**Methods:**
+- `pc`: Period-on-period percentage change
+- `pcy`: Year-on-year percentage change
+- `pca`: Annualized percentage change
+- `diff`: First differences
+- `diffy`: Year-on-year differences
 
-Comprehensive transform block for calculating various types of changes in time series data.
+#### `new_ts_frequency_block()`
+Convert time series between temporal granularities with smart aggregation.
 
-**Parameters:**
-- `method`: Calculation method (default: "pc")
-  - `"pc"` - Period-on-period percentage change
-  - `"pcy"` - Year-on-year percentage change
-  - `"pca"` - Annualized percentage change
-  - `"diff"` - First differences (absolute change)
-  - `"diffy"` - Year-on-year differences
+![Frequency Block](man/figures/ts_frequency_block.png)
+
+```r
+blockr.core::serve(
+  new_ts_frequency_block(to = "year", aggregate = "mean"),
+  data = list(data = tsbox::ts_tbl(datasets::AirPassengers))
+)
+```
 
 **Features:**
-- Interactive dropdown to switch between calculation methods
-- Dynamic descriptions explaining each method
-- Works with all time series frequencies
-- Handles both univariate and multivariate data
+- Automatic frequency detection
+- Smart target selection (only allows aggregation)
+- Multiple aggregation methods: mean, sum, first, last, min, max
 
-**Example:**
+#### `new_ts_select_block()`
+Select specific series from multivariate time series data.
+
+![Select Block](man/figures/ts_select_block.png)
+
 ```r
-# Year-over-year percentage change
+multivariate_data <- tsbox::ts_c(datasets::mdeaths, datasets::fdeaths)
+
+blockr.core::serve(
+  new_ts_select_block(series = "mdeaths"),
+  data = list(data = tsbox::ts_tbl(multivariate_data))
+)
+```
+
+#### `new_ts_lag_block()`
+Shift time series forward (lag) or backward (lead).
+
+![Lag Block](man/figures/ts_lag_block.png)
+
+```r
+blockr.core::serve(
+  new_ts_lag_block(by = 12),
+  data = list(data = tsbox::ts_tbl(datasets::AirPassengers))
+)
+```
+
+#### `new_ts_span_block()`
+Filter time series to specific date ranges with an intuitive range slider.
+
+![Span Block](man/figures/ts_span_block.png)
+
+```r
+blockr.core::serve(
+  new_ts_span_block(start = 1950, end = 1955),
+  data = list(data = tsbox::ts_tbl(datasets::AirPassengers))
+)
+```
+
+### Analysis Blocks
+
+#### `new_ts_scale_block()`
+Scale, normalize, or index time series for comparison.
+
+![Scale Block](man/figures/ts_scale_block.png)
+
+```r
+blockr.core::serve(
+  new_ts_scale_block(method = "normalize"),
+  data = list(data = tsbox::ts_tbl(datasets::AirPassengers))
+)
+```
+
+**Methods:**
+- `normalize`: Scale to mean=0, sd=1
+- `index`: Index to base period (100)
+- `minmax`: Scale to [0, 1] range
+
+#### `new_ts_decompose_block()`
+Extract trend, seasonal, and remainder components.
+
+![Decompose Block](man/figures/ts_decompose_block.png)
+
+```r
+blockr.core::serve(
+  new_ts_decompose_block(component = "seasonal_adjusted"),
+  data = list(data = tsbox::ts_tbl(datasets::AirPassengers))
+)
+```
+
+#### `new_ts_forecast_block()`
+Generate forecasts with confidence intervals.
+
+![Forecast Block](man/figures/ts_forecast_block.png)
+
+```r
+blockr.core::serve(
+  new_ts_forecast_block(horizon = 24),
+  data = list(data = tsbox::ts_tbl(datasets::AirPassengers))
+)
+```
+
+#### `new_ts_pca_block()`
+Principal Component Analysis for multivariate time series.
+
+![PCA Block](man/figures/ts_pca_block.png)
+
+```r
+blockr.core::serve(
+  new_ts_pca_block(n_components = 2),
+  data = list(data = tsbox::ts_tbl(datasets::EuStockMarkets))
+)
+```
+
+## Building Pipelines
+
+Combine blocks to create powerful analysis workflows:
+
+```r
+# Complete analysis pipeline
 blockr.core::serve(
   new_ts_dataset_block(dataset = "AirPassengers"),
-  new_ts_change_block(method = "pcy")
+  new_ts_decompose_block(component = "seasonal_adjusted"),
+  new_ts_change_block(method = "pcy"),
+  new_ts_forecast_block(horizon = 12)
 )
 
-# First differences for CO2 data
-blockr.core::serve(
-  new_ts_dataset_block(dataset = "co2"),
-  new_ts_change_block(method = "diff")
-)
-
-# Annualized percentage change for stock data
+# Multivariate analysis
 blockr.core::serve(
   new_ts_dataset_block(dataset = "EuStockMarkets"),
-  new_ts_change_block(method = "pca")
+  new_ts_select_block(series = c("DAX", "FTSE")),
+  new_ts_scale_block(method = "normalize"),
+  new_ts_pca_block(n_components = 1)
 )
 ```
 
-## Complete Workflow Examples
+## Direct Data Input
 
-### Example 1: Analyzing Stock Market Changes
+All transform blocks support direct data input for standalone use:
+
 ```r
-# European stock market percentage changes
+# Create your own time series data
+my_data <- list(
+  data = tsbox::ts_tbl(
+    ts(rnorm(100), frequency = 12, start = c(2020, 1))
+  )
+)
+
+# Apply transformations
 blockr.core::serve(
-  new_ts_dataset_block(dataset = "EuStockMarkets"),
-  new_ts_pc_block()
+  new_ts_change_block(method = "pc"),
+  data = my_data
 )
 ```
 
-### Example 2: CO2 Concentration Trends
-```r
-# Mauna Loa CO2 concentration with percentage changes
-blockr.core::serve(
-  new_ts_dataset_block(dataset = "co2"),
-  new_ts_pc_block()
-)
-```
+## Interactive Features
 
-### Example 3: Simple AirPassengers Display
-```r
-# Just display the classic dataset
-blockr.core::serve(
-  new_ts_airpassenger_block()
-)
-```
-
-## Available Time Series Datasets
-
-The `new_ts_dataset_block()` provides access to 25 built-in R time series:
-
-**Univariate Series (21):**
-- AirPassengers - Monthly airline passengers (1949-1960)
-- co2 - Mauna Loa CO2 concentration
-- Nile - River Nile flow (1871-1970)
-- lynx - Canadian lynx trappings (1821-1934)
-- sunspots - Monthly sunspot numbers (1749-1983)
-- And 16 more...
-
-**Multivariate Series (2):**
-- EuStockMarkets - 4 European stock indices (DAX, SMI, CAC, FTSE)
-- Seatbelts - 8 UK road casualty series (1969-1984)
+All blocks output interactive dygraphs with:
+- 🔍 **Pan & Zoom**: Click and drag to zoom, double-click to reset
+- 📏 **Range Selector**: Drag handles to focus on specific periods
+- 📍 **Hover Details**: See exact values and dates on hover
+- 🎨 **tsbox Colors**: Professional color palette for multivariate series
 
 ## Development
 
-### Testing
+### Creating Custom Blocks
+
+Follow the established patterns for new blocks:
+
 ```r
-# Load and test
-devtools::load_all()
+# Data blocks inherit from ts_data_block
+new_custom_data_block <- function(...) {
+  new_ts_data_block(
+    # Implementation
+    class = "custom_data_block",
+    ...
+  )
+}
+
+# Transform blocks inherit from ts_transform_block
+new_custom_transform_block <- function(...) {
+  new_ts_transform_block(
+    # Implementation
+    class = "custom_transform_block",
+    ...
+  )
+}
+```
+
+### Testing
+
+```r
+# Run all tests
 devtools::test()
 
-# Test individual blocks
-block <- new_ts_dataset_block(dataset = "lynx")
-class(block)  # Should include "ts_block" for dygraph display
+# Check specific block
+devtools::load_all()
+block <- new_ts_forecast_block(horizon = 12)
+blockr.core::serve(
+  block,
+  data = list(data = tsbox::ts_tbl(datasets::AirPassengers))
+)
 ```
 
-### Registration
-```r
-# Register blocks with blockr
-register_ts_blocks()
-```
+## Requirements
 
----
+- R >= 4.0.0
+- blockr.core
+- tsbox
+- dygraphs
+- forecast (for advanced analysis blocks)
+- shiny
 
-**This package provides time series analysis capabilities for blockr.** Use it to load, transform, and visualize time series data with interactive dygraphs.
+## License
+
+MIT
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## See Also
+
+- [blockr.core](https://github.com/blockr-org/blockr.core) - Core blockr framework
+- [blockr.ggplot](https://github.com/blockr-org/blockr.ggplot) - ggplot2 visualization blocks
+- [tsbox](https://www.tsbox.help/) - Time series toolbox
+- [dygraphs](https://rstudio.github.io/dygraphs/) - Interactive time series charts
