@@ -40,6 +40,18 @@ blockr.core::serve(
   data = list(data = tsbox::ts_tbl(tsbox::ts_c(datasets::mdeaths, datasets::fdeaths)))
 )
 
+# Example 3: Transform Block
+blockr.core::serve(
+  new_ts_select_block(),
+  data = list(data = tsbox::ts_tbl(tsbox::ts_c(datasets::mdeaths, datasets::fdeaths)))
+)
+
+# Example 4: Transform Block
+blockr.core::serve(
+  new_ts_lag_block(),
+  data = list(data = tsbox::ts_tbl(tsbox::ts_c(datasets::mdeaths, datasets::fdeaths)))
+)
+
 ```
 
 ## Available Blocks
