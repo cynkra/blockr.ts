@@ -9,10 +9,10 @@
 #'
 #' @return A ts_scale_block object
 #' @export
-new_ts_scale_block <- function(method = "normalize", base = NULL, ...) {
+new_ts_scale_block <- function(method = "index", base = NULL, ...) {
   
   # Validate method parameter
-  method <- match.arg(method, c("normalize", "index", "minmax"))
+  method <- match.arg(method, c("index", "normalize", "minmax"))
   
   new_ts_transform_block(
     function(id, data) {
@@ -135,7 +135,7 @@ new_ts_scale_block <- function(method = "normalize", base = NULL, ...) {
                 "Creates index with selected base date = 100"
               },
               "minmax" = "Scales data to range [0, 1]",
-              ""
+              "Standardizes data to mean = 0, SD = 1"  # Default fallback
             )
             
             helpText(

@@ -147,7 +147,7 @@ Scale, normalize, or index time series for comparison.
 
 ```r
 blockr.core::serve(
-  new_ts_scale_block(method = "normalize"),
+  new_ts_scale_block(method = "index"),
   data = list(data = tsbox::ts_tbl(datasets::AirPassengers))
 )
 ```
@@ -218,7 +218,7 @@ ts_board <- blockr.ui::new_dag_board(
 
     # Stocks branch
     stock_select = new_ts_select_block(series = c("DAX", "FTSE")),
-    stock_scale = new_ts_scale_block(method = "normalize"),
+    stock_scale = new_ts_scale_block(method = "index"),
     stock_pca = new_ts_pca_block(n_components = 2)
   ),
 
