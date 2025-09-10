@@ -60,18 +60,38 @@ new_ts_pca_block <- function(n_components = 2, standardize = TRUE, ...) {
               std <- r_standardize()
               
               # Use ts_prcomp for PCA
-              expr_text <- glue::glue("
-              {{
-                # Perform PCA
-                pca_result <- tsbox::ts_prcomp(data, scale = {tolower(as.character(std))})
-                
-                # Select requested number of components
-                tbl_result <- tsbox::ts_tbl(pca_result)
-                components <- unique(tbl_result$id)[1:min({n_comp}, length(unique(tbl_result$id)))]
-                
-                # Filter to selected components
-                tbl_result[tbl_result$id %in% components, ]
-              }}")
+              # Note: ts_prcomp doesn't properly support scale parameter, 
+              # so we standardize manually if needed
+              if (std) {
+                expr_text <- glue::glue("
+                {{
+                  # Standardize data manually before PCA
+                  data_std <- tsbox::ts_scale(data)
+                  
+                  # Perform PCA
+                  pca_result <- tsbox::ts_prcomp(data_std)
+                  
+                  # Select requested number of components
+                  tbl_result <- tsbox::ts_tbl(pca_result)
+                  components <- unique(tbl_result$id)[1:min({n_comp}, length(unique(tbl_result$id)))]
+                  
+                  # Filter to selected components
+                  tbl_result[tbl_result$id %in% components, ]
+                }}")
+              } else {
+                expr_text <- glue::glue("
+                {{
+                  # Perform PCA without standardization
+                  pca_result <- tsbox::ts_prcomp(data)
+                  
+                  # Select requested number of components
+                  tbl_result <- tsbox::ts_tbl(pca_result)
+                  components <- unique(tbl_result$id)[1:min({n_comp}, length(unique(tbl_result$id)))]
+                  
+                  # Filter to selected components
+                  tbl_result[tbl_result$id %in% components, ]
+                }}")
+              }
               
               parse(text = expr_text)[[1]]
             }),

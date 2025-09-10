@@ -193,112 +193,51 @@ blockr.core::serve(
 )
 ```
 
-## Building Pipelines
+### Advanced DAG Board Pipeline
 
-Combine blocks to create powerful analysis workflows:
-
-```r
-# Complete analysis pipeline
-blockr.core::serve(
-  new_ts_dataset_block(dataset = "AirPassengers"),
-  new_ts_decompose_block(component = "seasonal_adjusted"),
-  new_ts_change_block(method = "pcy"),
-  new_ts_forecast_block(horizon = 12)
-)
-
-# Multivariate analysis
-blockr.core::serve(
-  new_ts_dataset_block(dataset = "EuStockMarkets"),
-  new_ts_select_block(series = c("DAX", "FTSE")),
-  new_ts_scale_block(method = "normalize"),
-  new_ts_pca_block(n_components = 1)
-)
-```
-
-## Direct Data Input
-
-All transform blocks support direct data input for standalone use:
+For complex analyses with multiple branches, use the DAG board:
 
 ```r
-# Create your own time series data
-my_data <- list(
-  data = tsbox::ts_tbl(
-    ts(rnorm(100), frequency = 12, start = c(2020, 1))
+library(blockr.core)
+library(blockr.ui)
+library(blockr.dplyr)
+library(blockr.ggplot)
+library(blockr.ai)
+
+# Create comprehensive analysis board
+ts_board <- blockr.ui::new_dag_board(
+  blocks = c(
+    # Data sources
+    air = new_ts_dataset_block(dataset = "AirPassengers"),
+    stocks = new_ts_dataset_block(dataset = "EuStockMarkets"),
+
+    # AirPassengers branch
+    air_decomp = new_ts_decompose_block(component = "seasonal_adjusted"),
+    air_change = new_ts_change_block(method = "pcy"),
+    air_forecast = new_ts_forecast_block(horizon = 24),
+
+    # Stocks branch
+    stock_select = new_ts_select_block(series = c("DAX", "FTSE")),
+    stock_scale = new_ts_scale_block(method = "normalize"),
+    stock_pca = new_ts_pca_block(n_components = 2)
+  ),
+
+  links = c(
+    # Connect AirPassengers pipeline
+    new_link("air", "air_decomp", "data"),
+    new_link("air_decomp", "air_change", "data"),
+    new_link("air_change", "air_forecast", "data"),
+
+    # Connect stocks pipeline
+    new_link("stocks", "stock_select", "data"),
+    new_link("stock_select", "stock_scale", "data"),
+    new_link("stock_scale", "stock_pca", "data")
   )
 )
 
-# Apply transformations
-blockr.core::serve(
-  new_ts_change_block(method = "pc"),
-  data = my_data
-)
+# Serve the board
+blockr.core::serve(ts_board)
 ```
-
-## Interactive Features
-
-All blocks output interactive dygraphs with:
-- 🔍 **Pan & Zoom**: Click and drag to zoom, double-click to reset
-- 📏 **Range Selector**: Drag handles to focus on specific periods
-- 📍 **Hover Details**: See exact values and dates on hover
-- 🎨 **tsbox Colors**: Professional color palette for multivariate series
-
-## Development
-
-### Creating Custom Blocks
-
-Follow the established patterns for new blocks:
-
-```r
-# Data blocks inherit from ts_data_block
-new_custom_data_block <- function(...) {
-  new_ts_data_block(
-    # Implementation
-    class = "custom_data_block",
-    ...
-  )
-}
-
-# Transform blocks inherit from ts_transform_block
-new_custom_transform_block <- function(...) {
-  new_ts_transform_block(
-    # Implementation
-    class = "custom_transform_block",
-    ...
-  )
-}
-```
-
-### Testing
-
-```r
-# Run all tests
-devtools::test()
-
-# Check specific block
-devtools::load_all()
-block <- new_ts_forecast_block(horizon = 12)
-blockr.core::serve(
-  block,
-  data = list(data = tsbox::ts_tbl(datasets::AirPassengers))
-)
-```
-
-## Requirements
-
-- R >= 4.0.0
-- blockr.core
-- tsbox
-- dygraphs
-- forecast (for advanced analysis blocks)
-- shiny
-
-## License
-
-MIT
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## See Also
 
