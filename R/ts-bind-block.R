@@ -2,98 +2,151 @@
 #'
 #' Combine multiple time series into a single multivariate time series
 #'
-#' @param ... Additional arguments passed to new_ts_transform_block()
+#' @param ... Named time series data to combine. Each argument should be a 
+#'   time series that can be converted to tsbox format.
 #'
 #' @details
 #' This block uses tsbox::ts_c() to combine multiple univariate or multivariate
 #' time series into a single multivariate series. Each input series becomes a 
 #' separate series in the output, identified by the 'id' column.
 #'
-#' Unlike other transform blocks, this block accepts multiple data inputs
-#' and has no UI controls - it simply combines all incoming data.
+#' You can pass multiple time series as named arguments:
+#' \code{new_ts_bind_block(male = mdeaths, female = fdeaths)}
 #'
 #' @return A ts_bind_block object
 #' @export
 new_ts_bind_block <- function(...) {
   
-  new_ts_transform_block(
-    function(id, data) {
-      moduleServer(
-        id,
-        function(input, output, session) {
-          
-          # No UI controls needed - just combine the data
-          
-          list(
-            expr = reactive({
-              # Expression to combine time series
-              # tsbox::ts_c can take multiple arguments
-              expr_text <- "
-              {
-                # Convert to list if needed and ensure tibble format
-                if (!is.list(data)) {
-                  data <- list(data)
-                }
-                
-                # Convert each element to tibble format and ensure proper IDs
-                data_list <- lapply(seq_along(data), function(i) {
-                  d <- data[[i]]
-                  tbl <- tsbox::ts_tbl(d)
-                  
-                  # If no id column exists, add one
-                  if (!'id' %in% names(tbl)) {
-                    tbl$id <- paste0('series', i)
-                  }
-                  
-                  # Clean up existing IDs if they are too long or messy
-                  if ('id' %in% names(tbl)) {
-                    unique_ids <- unique(tbl$id)
-                    if (length(unique_ids) == 1 && nchar(unique_ids[1]) > 50) {
-                      # Replace overly long ID with simple name
-                      tbl$id <- paste0('series', i)
-                    }
-                  }
-                  
-                  tbl
-                })
-                
-                # Combine using ts_c
-                if (length(data_list) == 1) {
-                  data_list[[1]]
-                } else {
-                  # Name the list elements to avoid issues
-                  names(data_list) <- paste0('series', seq_along(data_list))
-                  do.call(tsbox::ts_c, data_list)
-                }
-              }"
-              
-              parse(text = expr_text)[[1]]
-            }),
-            state = list()  # No state needed
-          )
+  # Capture the input data
+  dots <- list(...)
+  
+  # If data is provided, combine it
+  if (length(dots) > 0) {
+    # Convert each input to tibble format
+    data_list <- lapply(seq_along(dots), function(i) {
+      d <- dots[[i]]
+      tbl <- tsbox::ts_tbl(d)
+      # Use the argument name as the series ID if available
+      nm <- names(dots)[i]
+      if (!is.null(nm) && nm != "") {
+        if (!'id' %in% names(tbl) || length(unique(tbl$id)) == 1) {
+          tbl$id <- nm
         }
-      )
-    },
-    function(id) {
-      tagList(
-        div(
-          class = "ts-block-container",
+      } else if (!'id' %in% names(tbl)) {
+        tbl$id <- paste0('series', i)
+      }
+      tbl
+    })
+    
+    # Combine all series
+    combined_data <- if (length(data_list) == 1) {
+      data_list[[1]]
+    } else {
+      do.call(tsbox::ts_c, data_list)
+    }
+    
+    # Return a data block with the combined data
+    new_ts_data_block(
+      server = function(id, data) {
+        moduleServer(
+          id,
+          function(input, output, session) {
+            list(
+              expr = reactive({
+                # Simply return the data that was passed to the block
+                quote(data)
+              }),
+              state = list()
+            )
+          }
+        )
+      },
+      ui = function(id) {
+        # Capture combined_data in closure
+        local_data <- combined_data
+        tagList(
           div(
-            class = "ts-block-info",
-            style = "margin: 15px;",
-            helpText(
-              icon("layer-group"),
-              "This block combines all incoming time series into a single multivariate series."
-            ),
-            helpText(
-              class = "text-muted",
-              "Connect multiple data sources to combine them. Each series will retain its identity in the 'id' column."
+            class = "ts-block-container",
+            div(
+              class = "ts-block-info",
+              style = "margin: 15px;",
+              helpText(
+                icon("layer-group"),
+                paste0("Combined ", length(unique(local_data$id)), " time series")
+              ),
+              helpText(
+                class = "text-muted",
+                paste("Series:", paste(unique(local_data$id), collapse = ", "))
+              )
             )
           )
         )
-      )
-    },
-    class = c("ts_bind_block"),
-    ...
-  )
+      },
+      class = c("ts_bind_block"),
+      data = combined_data
+    )
+  } else {
+    # No initial data - create a transform block that can combine incoming data
+    new_ts_transform_block(
+      function(id, data) {
+        moduleServer(
+          id,
+          function(input, output, session) {
+            list(
+              expr = reactive({
+                expr_text <- "
+                {
+                  # Combine incoming data
+                  if (is.list(data) && !is.data.frame(data)) {
+                    # Multiple inputs - combine them
+                    data_list <- lapply(seq_along(data), function(i) {
+                      d <- data[[i]]
+                      tbl <- tsbox::ts_tbl(d)
+                      # Add ID if missing
+                      if (!'id' %in% names(tbl)) {
+                        tbl$id <- paste0('series', i)
+                      }
+                      tbl
+                    })
+                    
+                    # Combine using ts_c
+                    if (length(data_list) == 1) {
+                      data_list[[1]]
+                    } else {
+                      do.call(tsbox::ts_c, data_list)
+                    }
+                  } else {
+                    # Single input
+                    tsbox::ts_tbl(data)
+                  }
+                }"
+                parse(text = expr_text)[[1]]
+              }),
+              state = list()
+            )
+          }
+        )
+      },
+      function(id) {
+        tagList(
+          div(
+            class = "ts-block-container",
+            div(
+              class = "ts-block-info",
+              style = "margin: 15px;",
+              helpText(
+                icon("layer-group"),
+                "This block combines incoming time series into a single multivariate series."
+              ),
+              helpText(
+                class = "text-muted",
+                "Connect multiple data sources to combine them."
+              )
+            )
+          )
+        )
+      },
+      class = c("ts_bind_block")
+    )
+  }
 }

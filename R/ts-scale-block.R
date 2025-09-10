@@ -250,6 +250,10 @@ new_ts_scale_block <- function(method = "index", base = NULL, ...) {
         )
       )
     },
+    dat_val = function(data) {
+      # Validate that input is a data.frame
+      stopifnot(is.data.frame(data))
+    },
     class = c("ts_scale_block"),
     ...
   )
