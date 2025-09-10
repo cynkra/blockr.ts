@@ -52,6 +52,11 @@ blockr.core::serve(
   data = list(data = tsbox::ts_tbl(tsbox::ts_c(datasets::mdeaths, datasets::fdeaths)))
 )
 
+# Example 5: Transform Block
+blockr.core::serve(
+  new_ts_span_block(),
+  data = list(data = tsbox::ts_tbl(tsbox::ts_c(datasets::mdeaths, datasets::fdeaths)))
+)
 ```
 
 ## Available Blocks

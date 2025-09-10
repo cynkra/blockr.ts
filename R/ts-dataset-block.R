@@ -10,6 +10,39 @@
 #' @export
 new_ts_dataset_block <- function(dataset = "AirPassengers", ...) {
   
+  # Helper function to get time series start/end as strings
+  get_ts_period <- function(dataset_name) {
+    tryCatch({
+      ts_obj <- get(dataset_name, envir = as.environment("package:datasets"))
+      start_vals <- start(ts_obj)
+      end_vals <- end(ts_obj)
+      
+      # Format based on frequency
+      freq <- frequency(ts_obj)
+      if (freq == 1) {
+        # Annual data
+        list(start = as.character(start_vals[1]), 
+             end = as.character(end_vals[1]))
+      } else if (freq == 4) {
+        # Quarterly
+        list(start = paste0(start_vals[1], " Q", start_vals[2]),
+             end = paste0(end_vals[1], " Q", end_vals[2]))
+      } else if (freq == 12) {
+        # Monthly
+        months <- c("Jan", "Feb", "Mar", "Apr", "May", "Jun", 
+                   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+        list(start = paste0(months[start_vals[2]], " ", start_vals[1]),
+             end = paste0(months[end_vals[2]], " ", end_vals[1]))
+      } else {
+        # Other frequencies
+        list(start = paste(start_vals, collapse="-"),
+             end = paste(end_vals, collapse="-"))
+      }
+    }, error = function(e) {
+      list(start = "", end = "")
+    })
+  }
+  
   # Define all available time series datasets with metadata
   ts_datasets <- list(
     "AirPassengers" = list(
@@ -171,32 +204,44 @@ new_ts_dataset_block <- function(dataset = "AirPassengers", ...) {
             r_dataset(input$dataset)
           })
           
-          # Reactive for dataset info
-          dataset_info <- reactive({
-            ts_datasets[[r_dataset()]]
-          })
-          
           # Update info display
           output$dataset_info <- renderUI({
-            info <- dataset_info()
+            current_dataset <- r_dataset()
+            info <- ts_datasets[[current_dataset]]
+            period <- get_ts_period(current_dataset)
+            
             freq_label <- switch(as.character(info$freq),
               "1" = "Annual",
               "4" = "Quarterly", 
               "12" = "Monthly",
-              "260" = "Daily (business days)",
+              "260" = "Daily",
               paste0("Frequency: ", info$freq)
             )
             
             tagList(
               tags$div(
-                class = "dataset-info-panel",
-                tags$strong("Type: "), 
-                tags$span(
-                  class = if (info$type == "multivariate") "badge-multi" else "badge-uni",
-                  paste0(info$type, " (", info$series, " series)")
-                ),
-                tags$br(),
-                tags$strong("Frequency: "), freq_label
+                class = "ts-dataset-info-panel",
+                tags$h5(info$desc, style = "margin-top: 0; margin-bottom: 10px; color: #333;"),
+                tags$div(
+                  style = "font-size: 0.9rem;",
+                  tags$div(
+                    style = "margin-bottom: 5px;",
+                    tags$strong("Type: "),
+                    tags$span(
+                      class = if (info$type == "multivariate") "badge-multi" else "badge-uni",
+                      paste0(info$type, " (", info$series, " series)")
+                    )
+                  ),
+                  tags$div(
+                    style = "margin-bottom: 5px;",
+                    tags$strong("Frequency: "),
+                    tags$span(freq_label)
+                  ),
+                  tags$div(
+                    tags$strong("Period: "),
+                    tags$span(paste(period$start, "-", period$end))
+                  )
+                )
               )
             )
           })
@@ -230,7 +275,13 @@ new_ts_dataset_block <- function(dataset = "AirPassengers", ...) {
           .ts-block-form-grid {
             display: grid;
             gap: 15px;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            grid-template-columns: 1fr;
+          }
+          
+          @media (min-width: 768px) {
+            .ts-block-form-grid {
+              grid-template-columns: 1fr 1fr;
+            }
           }
           
           .ts-block-section,
@@ -264,12 +315,11 @@ new_ts_dataset_block <- function(dataset = "AirPassengers", ...) {
           }
           
           .ts-dataset-info-panel {
-            grid-column: 1 / -1;
-            padding: 10px;
+            padding: 12px;
             background: #f8f9fa;
             border: 1px solid #dee2e6;
             border-radius: 4px;
-            margin-top: 5px;
+            height: fit-content;
           }
           
           .badge-multi {
@@ -287,6 +337,33 @@ new_ts_dataset_block <- function(dataset = "AirPassengers", ...) {
             border-radius: 3px;
             font-size: 0.875em;
           }
+          
+          /* DataTable specific styling */
+          .ts-block-dt-wrapper {
+            margin-top: 10px;
+          }
+          
+          .ts-block-dt-wrapper .dataTables_wrapper {
+            font-size: 0.9rem;
+          }
+          
+          .ts-block-dt-wrapper table.dataTable thead {
+            background-color: #f8f9fa;
+          }
+          
+          .ts-block-dt-wrapper table.dataTable tbody tr.selected {
+            background-color: #007bff !important;
+            color: white;
+          }
+          
+          .ts-block-dt-wrapper table.dataTable tbody tr:hover {
+            background-color: #e9ecef !important;
+            cursor: pointer;
+          }
+          
+          .ts-block-dt-wrapper table.dataTable tbody tr.selected:hover {
+            background-color: #0056b3 !important;
+          }
           "
         )),
         
@@ -296,45 +373,43 @@ new_ts_dataset_block <- function(dataset = "AirPassengers", ...) {
           div(
             class = "ts-block-form-grid",
             
-            # Data Section
+            # Data Section with two columns
+            tags$h4("Time Series Dataset", style = "grid-column: 1 / -1;"),
+            
+            # Left column: Dataset selector
             div(
-              class = "ts-block-section",
-              tags$h4("Data"),
-              
+              class = "ts-block-column",
               div(
-                class = "ts-block-section-grid",
-                
-                div(
-                  class = "ts-block-input-wrapper",
-                  selectInput(
-                    NS(id, "dataset"),
-                    label = "Time Series Dataset",
-                    choices = setNames(
-                      names(ts_datasets),
-                      sapply(names(ts_datasets), function(name) {
-                        info <- ts_datasets[[name]]
-                        paste0(name, " - ", info$desc)
-                      })
-                    ),
-                    selected = dataset,
-                    width = "100%"
-                  )
+                class = "ts-block-input-wrapper",
+                selectInput(
+                  NS(id, "dataset"),
+                  label = "Select Dataset",
+                  choices = setNames(
+                    names(ts_datasets),
+                    sapply(names(ts_datasets), function(name) {
+                      info <- ts_datasets[[name]]
+                      paste0(name, " - ", info$desc)
+                    })
+                  ),
+                  selected = dataset,
+                  width = "100%"
                 )
-              ),
+              )
+            ),
+            
+            # Right column: Dataset info
+            div(
+              class = "ts-block-column",
+              uiOutput(NS(id, "dataset_info"))
+            ),
               
-              # Dynamic info display
-              div(
-                class = "ts-dataset-info-panel",
-                uiOutput(NS(id, "dataset_info"))
-              ),
-              
-              # Help text
-              div(
-                class = "ts-block-help-text",
-                helpText(
-                  "Access to all 25 built-in R time series datasets. ",
-                  "Data is converted to tidy format and displayed as an interactive dygraph."
-                )
+            # Help text (spans full width)
+            div(
+              class = "ts-block-help-text",
+              style = "grid-column: 1 / -1;",
+              helpText(
+                "Access to all 25 built-in R time series datasets. ",
+                "Data is converted to tidy format and displayed as an interactive dygraph."
               )
             )
           )
