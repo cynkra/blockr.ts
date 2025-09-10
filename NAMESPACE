@@ -2,7 +2,8 @@
 
 S3method(block_output,ts_block)
 S3method(block_ui,ts_block)
-export(new_ts_block)
+export(new_ts_airpassenger_block)
+export(new_ts_data_block)
 export(register_ts_blocks)
 import(blockr.core)
 import(shiny)

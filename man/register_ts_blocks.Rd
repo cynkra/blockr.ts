@@ -7,5 +7,5 @@
 register_ts_blocks()
 }
 \description{
-Register the time series data block with the blockr registry
+Register the time series data blocks with the blockr registry
 }
