@@ -85,48 +85,93 @@ new_ts_change_block <- function(method = "pc", ...) {
     },
     function(id) {
       tagList(
+        # Add responsive CSS
+        tags$style(HTML(
+          "
+          .ts-block-container {
+            width: 100%;
+            margin: 0px;
+            padding: 0px;
+            padding-bottom: 15px;
+          }
+          
+          .ts-block-form-grid {
+            display: grid;
+            gap: 15px;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+          }
+          
+          .ts-block-section,
+          .ts-block-section-grid {
+            display: contents;
+          }
+          
+          .ts-block-section h4 {
+            grid-column: 1 / -1;
+            margin-top: 5px;
+            margin-bottom: 0px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #333;
+          }
+          
+          .ts-block-input-wrapper {
+            width: 100%;
+          }
+          
+          .ts-block-input-wrapper .form-group {
+            margin-bottom: 10px;
+          }
+          
+          .ts-block-help-text {
+            grid-column: 1 / -1;
+            margin-top: 0px;
+            padding-top: 0px;
+            font-size: 0.875rem;
+            color: #666;
+          }
+          "
+        )),
+        
         div(
-          class = "ts-change-container",
+          class = "ts-block-container",
           
-          # CSS for the block
-          tags$style(HTML(
-            "
-            .ts-change-container {
-              padding: 12px;
-              background: #f8f9fa;
-              border-radius: 6px;
-            }
-            .method-selector {
-              margin-bottom: 10px;
-            }
-            .method-selector label {
-              font-weight: 600;
-              color: #495057;
-              margin-bottom: 4px;
-            }
-            "
-          )),
-          
-          # Method selector
           div(
-            class = "method-selector",
-            selectInput(
-              NS(id, "method"),
-              label = "Calculation Method",
-              choices = c(
-                "Period-on-period %" = "pc",
-                "Year-on-year %" = "pcy",
-                "Annualized %" = "pca",
-                "First differences" = "diff",
-                "Year-on-year differences" = "diffy"
+            class = "ts-block-form-grid",
+            
+            # Calculation Section
+            div(
+              class = "ts-block-section",
+              tags$h4("Calculation"),
+              
+              div(
+                class = "ts-block-section-grid",
+                
+                div(
+                  class = "ts-block-input-wrapper",
+                  selectInput(
+                    NS(id, "method"),
+                    label = "Method",
+                    choices = c(
+                      "Period-on-period %" = "pc",
+                      "Year-on-year %" = "pcy",
+                      "Annualized %" = "pca",
+                      "First differences" = "diff",
+                      "Year-on-year differences" = "diffy"
+                    ),
+                    selected = method,
+                    width = "100%"
+                  )
+                )
               ),
-              selected = method,
-              width = "100%"
+              
+              # Dynamic description
+              div(
+                class = "ts-block-help-text",
+                uiOutput(NS(id, "method_description"))
+              )
             )
-          ),
-          
-          # Dynamic description
-          uiOutput(NS(id, "method_description"))
+          )
         )
       )
     },

@@ -60,14 +60,24 @@ block_output.ts_block <- function(x, result, session) {
     }
     
     # Use tsbox::ts_dygraphs to create the dygraph
-    # This is where ts_dygraphs is called!
+    # ts_dygraphs automatically uses tsbox colors
     dygraph <- tsbox::ts_dygraphs(result)
     
-    # Add nice styling
+    # Add nice styling with tsbox colors
+    # Get number of series to determine how many colors we need
+    n_series <- if ("id" %in% names(result)) {
+      length(unique(result$id))
+    } else {
+      1  # univariate series
+    }
+    
+    # Use tsbox colors palette
+    colors_to_use <- tsbox::colors_tsbox()[seq_len(n_series)]
+    
     dygraph <- dygraphs::dyOptions(dygraph, 
                                     fillGraph = FALSE, 
                                     drawGrid = TRUE,
-                                    colors = "#007bff")
+                                    colors = colors_to_use)
     dygraph <- dygraphs::dyRangeSelector(dygraph, height = 20)
     
     dygraph

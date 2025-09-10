@@ -30,8 +30,8 @@ blockr.core::serve(
 
 # Example 2: Transform Block
 blockr.core::serve(
-  new_ts_pc_block(),
-  data = list(data = tsbox::ts_tbl(datasets::AirPassengers))
+  new_ts_change_block(),
+  data = list(data = tsbox::ts_tbl(tsbox::ts_c(datasets::mdeaths, datasets::fdeaths)))
 )
 
 ```

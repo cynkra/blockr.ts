@@ -217,71 +217,126 @@ new_ts_dataset_block <- function(dataset = "AirPassengers", ...) {
     },
     function(id) {
       tagList(
+        # Add responsive CSS
+        tags$style(HTML(
+          "
+          .ts-block-container {
+            width: 100%;
+            margin: 0px;
+            padding: 0px;
+            padding-bottom: 15px;
+          }
+          
+          .ts-block-form-grid {
+            display: grid;
+            gap: 15px;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+          }
+          
+          .ts-block-section,
+          .ts-block-section-grid {
+            display: contents;
+          }
+          
+          .ts-block-section h4 {
+            grid-column: 1 / -1;
+            margin-top: 5px;
+            margin-bottom: 0px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #333;
+          }
+          
+          .ts-block-input-wrapper {
+            width: 100%;
+          }
+          
+          .ts-block-input-wrapper .form-group {
+            margin-bottom: 10px;
+          }
+          
+          .ts-block-help-text {
+            grid-column: 1 / -1;
+            margin-top: 0px;
+            padding-top: 0px;
+            font-size: 0.875rem;
+            color: #666;
+          }
+          
+          .ts-dataset-info-panel {
+            grid-column: 1 / -1;
+            padding: 10px;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            margin-top: 5px;
+          }
+          
+          .badge-multi {
+            background-color: #17a2b8;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 0.875em;
+          }
+          
+          .badge-uni {
+            background-color: #28a745;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 0.875em;
+          }
+          "
+        )),
+        
         div(
-          class = "ts-dataset-container",
+          class = "ts-block-container",
           
-          # CSS for the block
-          tags$style(HTML(
-            "
-            .ts-dataset-container {
-              padding: 15px;
-              background: #f8f9fa;
-              border-radius: 8px;
-              margin-bottom: 15px;
-            }
-            .dataset-selector {
-              margin-bottom: 15px;
-            }
-            .dataset-info-panel {
-              padding: 10px;
-              background: white;
-              border: 1px solid #dee2e6;
-              border-radius: 4px;
-              margin-top: 10px;
-            }
-            .badge-multi {
-              background-color: #17a2b8;
-              color: white;
-              padding: 2px 8px;
-              border-radius: 3px;
-              font-size: 0.875em;
-            }
-            .badge-uni {
-              background-color: #28a745;
-              color: white;
-              padding: 2px 8px;
-              border-radius: 3px;
-              font-size: 0.875em;
-            }
-            "
-          )),
-          
-          # Dataset selector
           div(
-            class = "dataset-selector",
-            h4("Select Time Series Dataset"),
-            selectInput(
-              NS(id, "dataset"),
-              label = NULL,
-              choices = setNames(
-                names(ts_datasets),
-                sapply(names(ts_datasets), function(name) {
-                  info <- ts_datasets[[name]]
-                  paste0(name, " - ", info$desc)
-                })
+            class = "ts-block-form-grid",
+            
+            # Data Section
+            div(
+              class = "ts-block-section",
+              tags$h4("Data"),
+              
+              div(
+                class = "ts-block-section-grid",
+                
+                div(
+                  class = "ts-block-input-wrapper",
+                  selectInput(
+                    NS(id, "dataset"),
+                    label = "Time Series Dataset",
+                    choices = setNames(
+                      names(ts_datasets),
+                      sapply(names(ts_datasets), function(name) {
+                        info <- ts_datasets[[name]]
+                        paste0(name, " - ", info$desc)
+                      })
+                    ),
+                    selected = dataset,
+                    width = "100%"
+                  )
+                )
               ),
-              selected = dataset,
-              width = "100%"
+              
+              # Dynamic info display
+              div(
+                class = "ts-dataset-info-panel",
+                uiOutput(NS(id, "dataset_info"))
+              ),
+              
+              # Help text
+              div(
+                class = "ts-block-help-text",
+                helpText(
+                  "Access to all 25 built-in R time series datasets. ",
+                  "Data is converted to tidy format and displayed as an interactive dygraph."
+                )
+              )
             )
-          ),
-          
-          # Dynamic info display
-          uiOutput(NS(id, "dataset_info")),
-          
-          # Help text
-          helpText(
-            "This block provides access to all built-in R time series datasets.",
-            "Data is automatically converted to tidy format using tsbox and displayed as an interactive dygraph."
           )
         )
       )
