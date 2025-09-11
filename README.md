@@ -32,26 +32,23 @@ devtools::install()
 library(blockr.core)
 library(blockr.ts)
 
-# Register blocks with blockr
-register_ts_blocks()
-
-# Start with a dataset and apply transformations
+# Create a pipeline using new_board()
 blockr.core::serve(
-  new_ts_dataset_block(dataset = "AirPassengers"),
-  new_ts_change_block(method = "pcy")
+  new_board(
+    blocks = c(
+      data = new_ts_dataset_block(dataset = "AirPassengers"),
+      transform = new_ts_change_block(method = "pcy")
+    ),
+    links = c(
+      data_to_transform = new_link("data", "transform")
+    )
+  )
 )
 ```
 
 ## Available Blocks
 
 ### Data Blocks
-
-#### `new_ts_airpassenger_block()`
-Classic AirPassengers dataset - a simple starting point for time series analysis.
-
-```r
-blockr.core::serve(new_ts_airpassenger_block())
-```
 
 #### `new_ts_dataset_block()`
 Access all 25 built-in R time series datasets with an intuitive selector.
@@ -191,6 +188,38 @@ Principal Component Analysis for multivariate time series.
 blockr.core::serve(
   new_ts_pca_block(n_components = 2),
   data = list(data = tsbox::ts_tbl(datasets::EuStockMarkets))
+)
+```
+
+#### `new_ts_to_df_block()`
+Convert time series data to regular data frame format, removing the dygraph visualization. Useful for integrating with non-TS blocks or exporting data.
+
+```r
+blockr.core::serve(
+  new_ts_to_df_block(format = "long"),
+  data = list(data = tsbox::ts_tbl(tsbox::ts_c(datasets::mdeaths, datasets::fdeaths)))
+)
+
+blockr.core::serve(
+  new_ts_to_df_block(format = "wide"),
+  data = list(data = tsbox::ts_tbl(tsbox::ts_c(datasets::mdeaths, datasets::fdeaths)))
+)
+```
+
+#### `new_ts_from_df_block()`
+Convert wide-format data frames to time series format with dygraph visualization. Automatically detects time columns and converts numeric columns to separate series.
+
+```r
+df_wide <- data.frame(
+  date = seq(as.Date("2020-01-01"), by = "month", length.out = 24),
+  sales = rnorm(24, 100, 10),
+  revenue = rnorm(24, 1000, 100),
+  costs = rnorm(24, 500, 50)
+)
+
+blockr.core::serve(
+  new_ts_from_df_block(),
+  data = list(data = df_wide)
 )
 ```
 

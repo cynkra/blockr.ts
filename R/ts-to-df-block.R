@@ -98,8 +98,8 @@ new_ts_to_df_block <- function(format = "long", ...) {
               selected_format <- r_format()
               
               if (selected_format == "long") {
-                # For long format, data passes through unchanged
-                parse(text = "data")[[1]]
+                # For long format, ensure data is in tsbox tibble format
+                parse(text = "tsbox::ts_tbl(data)")[[1]]
               } else {
                 # For wide format, use ts_wide
                 parse(text = "tsbox::ts_wide(data)")[[1]]
@@ -185,6 +185,10 @@ new_ts_to_df_block <- function(format = "long", ...) {
           )
         )
       )
+    },
+    dat_val = function(data) {
+      # Validate that input is a data.frame
+      stopifnot(is.data.frame(data))
     },
     class = c("ts_to_df_block"),
     ...
