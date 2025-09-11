@@ -17,7 +17,9 @@ register_ts_blocks <- function() {
       "new_ts_forecast_block",
       "new_ts_decompose_block",
       "new_ts_pca_block",
-      "new_ts_bind_block"
+      "new_ts_bind_block",
+      "new_ts_from_df_block",
+      "new_ts_to_df_block"
     ),
     name = c(
       "AirPassengers Time Series",
@@ -31,7 +33,9 @@ register_ts_blocks <- function() {
       "Forecast",
       "Decomposition",
       "PCA",
-      "Bind Series"
+      "Bind Series",
+      "DataFrame to Time Series",
+      "Time Series to DataFrame"
     ),
     description = c(
       "Display AirPassengers time series as an interactive dygraph",
@@ -45,11 +49,15 @@ register_ts_blocks <- function() {
       "Generate forecasts with confidence intervals",
       "Extract trend, seasonal, and remainder components",
       "Principal component analysis for multivariate series",
-      "Combine multiple time series into one multivariate series"
+      "Combine multiple time series into one multivariate series",
+      "Convert wide-format data frames to time series long format",
+      "Convert time series data to regular data frame (long or wide format)"
     ),
     category = c(
       "data",
       "data",
+      "transform",
+      "transform",
       "transform",
       "transform",
       "transform",
