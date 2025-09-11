@@ -17,7 +17,7 @@ visualized as a dygraph and used with other time series blocks.
 \details{
 This block uses tsbox::ts_long() to convert wide data frames where:
 \itemize{
-\item The time column is automatically detected (must be Date, POSIXct, or similar)
+\item The time column is automatically detected (character, Date, POSIXct, etc. are all accepted)
 \item All other numeric columns are treated as separate time series
 \item The output is in long format with columns: id, time, value
 }
