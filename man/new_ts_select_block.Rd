@@ -4,10 +4,12 @@
 \alias{new_ts_select_block}
 \title{Time Series Selection Block}
 \usage{
-new_ts_select_block(series = NULL, ...)
+new_ts_select_block(series = NULL, multiple = TRUE, ...)
 }
 \arguments{
 \item{series}{Character vector of series names to select (default: NULL selects all)}
+
+\item{multiple}{Logical, whether to allow multiple series selection (default: TRUE)}
 
 \item{...}{Additional arguments passed to new_ts_transform_block}
 }

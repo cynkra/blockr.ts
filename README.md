@@ -107,7 +107,7 @@ Select specific series from multivariate time series data.
 multivariate_data <- tsbox::ts_c(datasets::mdeaths, datasets::fdeaths)
 
 blockr.core::serve(
-  new_ts_select_block(series = "mdeaths"),
+  new_ts_select_block(series = "mdeaths", multiple = FALSE),
   data = list(data = tsbox::ts_tbl(multivariate_data))
 )
 ```
