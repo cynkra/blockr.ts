@@ -37,7 +37,6 @@ new_ts_pca_block <- function(n_components = 2, standardize = TRUE, ...) {
 
             div(
               helpText(
-                icon("project-diagram"),
                 sprintf(
                   "Extracting %d principal component%s",
                   n_comp,
@@ -146,9 +145,8 @@ new_ts_pca_block <- function(n_components = 2, standardize = TRUE, ...) {
               ),
 
               div(
-                class = "alert alert-info",
-                icon("info-circle"),
-                " PCA requires multivariate time series data (e.g., EuStockMarkets)."
+                class = "ts-block-help-text",
+                "PCA requires multivariate time series data (e.g., EuStockMarkets)."
               )
             )
           )

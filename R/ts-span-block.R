@@ -24,10 +24,16 @@ new_ts_span_block <- function(start = NULL, end = NULL, ...) {
           r_start <- reactiveVal(start)
           r_end <- reactiveVal(end)
 
+          # Track whether user has interacted with slider
+          user_changed_start <- reactiveVal(FALSE)
+          user_changed_end <- reactiveVal(FALSE)
+
           # Detect data time range
           data_range <- reactive({
-            # Handle both reactive and non-reactive data
+            # Handle both reactive, function, and non-reactive data
             if (is.reactive(data)) {
+              data_val <- data()
+            } else if (is.function(data)) {
               data_val <- data()
             } else if (!is.null(data)) {
               data_val <- data
@@ -72,14 +78,13 @@ new_ts_span_block <- function(start = NULL, end = NULL, ...) {
             range_info <- data_range()
 
             if (!is.null(range_info)) {
-              tags$div(
-                class = "alert alert-info",
-                style = "padding: 8px; margin-bottom: 10px; font-size: 0.9em; background-color: #d1ecf1; border: 1px solid #bee5eb;",
-                icon("calendar-alt"),
-                tags$strong("Data Range: "),
-                format(range_info$min, "%Y-%m-%d"),
-                " to ",
-                format(range_info$max, "%Y-%m-%d")
+              div(
+                class = "ts-block-help-text",
+                sprintf(
+                  "Data range: %s to %s",
+                  format(range_info$min, "%Y-%m-%d"),
+                  format(range_info$max, "%Y-%m-%d")
+                )
               )
             } else {
               NULL
@@ -92,8 +97,10 @@ new_ts_span_block <- function(start = NULL, end = NULL, ...) {
 
             if (!is.null(range_info)) {
               # Get the actual data frequency
-              # Handle both reactive and non-reactive data
+              # Handle both reactive, function, and non-reactive data
               if (is.reactive(data)) {
+                data_val <- data()
+              } else if (is.function(data)) {
                 data_val <- data()
               } else if (!is.null(data)) {
                 data_val <- data
@@ -183,11 +190,31 @@ new_ts_span_block <- function(start = NULL, end = NULL, ...) {
           # Observer for slider input
           observeEvent(input$dateRange, {
             if (!is.null(input$dateRange)) {
-              # Update start and end based on slider
-              r_start(format(input$dateRange[1], "%Y-%m-%d"))
-              r_end(format(input$dateRange[2], "%Y-%m-%d"))
+              range_info <- data_range()
+              if (!is.null(range_info)) {
+                slider_start <- as.Date(input$dateRange[1])
+                slider_end <- as.Date(input$dateRange[2])
+
+                # Check if user changed start from data min
+                if (!identical(slider_start, range_info$min)) {
+                  r_start(format(slider_start, "%Y-%m-%d"))
+                  user_changed_start(TRUE)
+                } else if (!user_changed_start() && is.null(start)) {
+                  # Keep NULL if not changed and initialized as NULL
+                  r_start(NULL)
+                }
+
+                # Check if user changed end from data max
+                if (!identical(slider_end, range_info$max)) {
+                  r_end(format(slider_end, "%Y-%m-%d"))
+                  user_changed_end(TRUE)
+                } else if (!user_changed_end() && is.null(end)) {
+                  # Keep NULL if not changed and initialized as NULL
+                  r_end(NULL)
+                }
+              }
             }
-          })
+          }, ignoreInit = TRUE)
 
           # Dynamic description based on settings
           output$span_description <- renderUI({
@@ -195,30 +222,18 @@ new_ts_span_block <- function(start = NULL, end = NULL, ...) {
             current_end <- r_end()
 
             if (is.null(current_start) && is.null(current_end)) {
-              helpText(
-                icon("info-circle"),
-                "No filtering applied - showing full time range"
-              )
+              helpText("No filtering applied - showing full time range")
             } else if (!is.null(current_start) && !is.null(current_end)) {
-              helpText(
-                icon("filter"),
-                paste0(
-                  "Filtering data from ",
-                  current_start,
-                  " to ",
-                  current_end
-                )
-              )
+              helpText(paste0(
+                "Filtering data from ",
+                current_start,
+                " to ",
+                current_end
+              ))
             } else if (!is.null(current_start)) {
-              helpText(
-                icon("filter"),
-                paste0("Filtering data from ", current_start, " onwards")
-              )
+              helpText(paste0("Filtering data from ", current_start, " onwards"))
             } else {
-              helpText(
-                icon("filter"),
-                paste0("Filtering data up to ", current_end)
-              )
+              helpText(paste0("Filtering data up to ", current_end))
             }
           })
 
@@ -261,63 +276,8 @@ new_ts_span_block <- function(start = NULL, end = NULL, ...) {
     },
     function(id) {
       tagList(
-        # Add responsive CSS
-        tags$style(HTML(
-          "
-          .ts-block-container {
-            width: 100%;
-            margin: 0px;
-            padding: 0px;
-            padding-bottom: 15px;
-          }
-          
-          .ts-block-form-grid {
-            display: grid;
-            gap: 15px;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-          }
-          
-          .ts-block-section,
-          .ts-block-section-grid {
-            display: contents;
-          }
-          
-          .ts-block-section h4 {
-            grid-column: 1 / -1;
-            margin-top: 5px;
-            margin-bottom: 0px;
-            font-size: 1.1rem;
-            font-weight: 600;
-            color: #333;
-          }
-          
-          .ts-block-input-wrapper {
-            width: 100%;
-          }
-          
-          .ts-block-input-wrapper .form-group {
-            margin-bottom: 10px;
-          }
-          
-          .ts-block-help-text {
-            grid-column: 1 / -1;
-            margin-top: 0px;
-            padding-top: 0px;
-            font-size: 0.875rem;
-            color: #666;
-          }
-          
-          .ts-block-info-box {
-            grid-column: 1 / -1;
-            padding: 8px;
-            margin-bottom: 10px;
-            font-size: 0.9em;
-            background-color: #f0f8ff;
-            border: 1px solid #b0d4ff;
-            border-radius: 4px;
-          }
-          "
-        )),
+        # Centralized responsive CSS
+        ts_responsive_css(),
 
         div(
           class = "ts-block-container",

@@ -89,7 +89,6 @@ new_ts_bind_block <- function(...) {
               class = "ts-block-info",
               style = "margin: 15px;",
               helpText(
-                icon("layer-group"),
                 paste0(
                   "Combined ",
                   length(unique(local_data$id)),
@@ -157,7 +156,6 @@ new_ts_bind_block <- function(...) {
               class = "ts-block-info",
               style = "margin: 15px;",
               helpText(
-                icon("layer-group"),
                 "This block combines incoming time series into a single multivariate series."
               ),
               helpText(

@@ -86,63 +86,8 @@ new_ts_lag_block <- function(by = 1L, ...) {
     },
     function(id) {
       tagList(
-        # Add responsive CSS
-        tags$style(HTML(
-          "
-          .ts-block-container {
-            width: 100%;
-            margin: 0px;
-            padding: 0px;
-            padding-bottom: 15px;
-          }
-          
-          .ts-block-form-grid {
-            display: grid;
-            gap: 15px;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-          }
-          
-          .ts-block-section,
-          .ts-block-section-grid {
-            display: contents;
-          }
-          
-          .ts-block-section h4 {
-            grid-column: 1 / -1;
-            margin-top: 5px;
-            margin-bottom: 0px;
-            font-size: 1.1rem;
-            font-weight: 600;
-            color: #333;
-          }
-          
-          .ts-block-input-wrapper {
-            width: 100%;
-          }
-          
-          .ts-block-input-wrapper .form-group {
-            margin-bottom: 10px;
-          }
-          
-          .ts-block-help-text {
-            grid-column: 1 / -1;
-            margin-top: 0px;
-            padding-top: 0px;
-            font-size: 0.875rem;
-            color: #666;
-          }
-          
-          .ts-block-info-box {
-            grid-column: 1 / -1;
-            padding: 8px;
-            margin-bottom: 10px;
-            font-size: 0.9em;
-            background-color: #f0f8ff;
-            border: 1px solid #b0d4ff;
-            border-radius: 4px;
-          }
-          "
-        )),
+        # Centralized responsive CSS
+        ts_responsive_css(),
 
         div(
           class = "ts-block-container",

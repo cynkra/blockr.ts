@@ -30,7 +30,6 @@ new_ts_forecast_block <- function(horizon = 12, ...) {
 
             div(
               helpText(
-                icon("chart-line"),
                 sprintf(
                   "Forecasting %d period%s ahead using exponential smoothing",
                   horizon_val,

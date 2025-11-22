@@ -292,58 +292,23 @@ new_ts_dataset_block <- function(dataset = "AirPassengers", ...) {
     },
     function(id) {
       tagList(
-        # Add responsive CSS
+        # Centralized responsive CSS
+        ts_responsive_css(),
+
+        # Block-specific CSS for dataset selector
         tags$style(HTML(
           "
-          .ts-block-container {
-            width: 100%;
-            margin: 0px;
-            padding: 0px;
-            padding-bottom: 15px;
-          }
-          
-          .ts-block-form-grid {
-            display: grid;
-            gap: 15px;
+          /* Two-column layout for dataset block */
+          .ts-block-container .ts-block-form-grid {
             grid-template-columns: 1fr;
           }
-          
+
           @media (min-width: 768px) {
-            .ts-block-form-grid {
+            .ts-block-container .ts-block-form-grid {
               grid-template-columns: 1fr 1fr;
             }
           }
-          
-          .ts-block-section,
-          .ts-block-section-grid {
-            display: contents;
-          }
-          
-          .ts-block-section h4 {
-            grid-column: 1 / -1;
-            margin-top: 5px;
-            margin-bottom: 0px;
-            font-size: 1.1rem;
-            font-weight: 600;
-            color: #333;
-          }
-          
-          .ts-block-input-wrapper {
-            width: 100%;
-          }
-          
-          .ts-block-input-wrapper .form-group {
-            margin-bottom: 10px;
-          }
-          
-          .ts-block-help-text {
-            grid-column: 1 / -1;
-            margin-top: 0px;
-            padding-top: 0px;
-            font-size: 0.875rem;
-            color: #666;
-          }
-          
+
           .ts-dataset-info-panel {
             padding: 12px;
             background: #f8f9fa;

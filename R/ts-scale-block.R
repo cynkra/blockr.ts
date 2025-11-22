@@ -145,10 +145,7 @@ new_ts_scale_block <- function(method = "index", base = NULL, ...) {
               "Standardizes data to mean = 0, SD = 1" # Default fallback
             )
 
-            helpText(
-              icon("info-circle"),
-              description
-            )
+            helpText(description)
           })
 
           list(
@@ -188,43 +185,8 @@ new_ts_scale_block <- function(method = "index", base = NULL, ...) {
     },
     function(id) {
       tagList(
-        # Add responsive CSS
-        tags$style(HTML(
-          "
-          .ts-block-container {
-            width: 100%;
-            margin: 0px;
-            padding-bottom: 15px;
-          }
-          
-          .ts-block-form-grid {
-            display: grid;
-            gap: 15px;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-          }
-          
-          .ts-block-section h4 {
-            grid-column: 1 / -1;
-            font-size: 1.1rem;
-            font-weight: 600;
-            color: #333;
-          }
-          
-          .ts-block-input-wrapper {
-            display: flex;
-            flex-direction: column;
-            grid-column: 1 / -1;
-          }
-          
-          .ts-block-info {
-            grid-column: 1 / -1;
-            padding: 10px;
-            background-color: #f8f9fa;
-            border-radius: 4px;
-            margin-top: 5px;
-          }
-        "
-        )),
+        # Centralized responsive CSS
+        ts_responsive_css(),
 
         div(
           class = "ts-block-container",

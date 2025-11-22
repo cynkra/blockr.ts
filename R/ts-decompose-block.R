@@ -62,7 +62,7 @@ new_ts_decompose_block <- function(
             )
 
             div(
-              helpText(icon("info-circle"), description),
+              helpText(description),
               helpText(class = "text-muted", method_note)
             )
           })

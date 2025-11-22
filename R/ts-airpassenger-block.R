@@ -26,40 +26,18 @@ new_ts_airpassenger_block <- function(...) {
     },
     function(id) {
       tagList(
+        # Centralized responsive CSS
+        ts_responsive_css(),
+
         div(
           class = "ts-block-container",
 
-          # Simple CSS for clean layout
-          tags$style(HTML(
-            "
-            .ts-block-container {
-              padding: 15px;
-              background: #f8f9fa;
-              border-radius: 8px;
-              margin-bottom: 15px;
-            }
-            .ts-block-info {
-              color: #495057;
-            }
-            .ts-block-info h4 {
-              margin-top: 0;
-              margin-bottom: 8px;
-              font-size: 16px;
-            }
-          "
-          )),
-
           # Simple info display
           div(
-            class = "ts-block-info",
-            h4("AirPassengers Time Series"),
-            p(
-              "Monthly totals of international airline passengers from 1949 to 1960."
-            ),
-            helpText(
-              "This block displays the classic AirPassengers dataset as an interactive dygraph.",
-              "The data is automatically converted to a data frame format using tsbox."
-            )
+            class = "ts-block-help-text",
+            tags$h4("AirPassengers Time Series"),
+            p("Monthly totals of international airline passengers from 1949 to 1960."),
+            p("This block displays the classic AirPassengers dataset as an interactive dygraph.")
           )
         )
       )

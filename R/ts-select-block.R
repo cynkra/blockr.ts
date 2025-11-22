@@ -20,8 +20,10 @@ new_ts_select_block <- function(series = NULL, multiple = TRUE, ...) {
         function(input, output, session) {
           # Get available series from data
           available_series <- reactive({
-            # Handle both reactive and non-reactive data
+            # Handle both reactive, function, and non-reactive data
             if (is.reactive(data)) {
+              data_val <- data()
+            } else if (is.function(data)) {
               data_val <- data()
             } else if (!is.null(data)) {
               data_val <- data
@@ -136,15 +138,10 @@ new_ts_select_block <- function(series = NULL, multiple = TRUE, ...) {
               }
 
               if (has_data) {
-                tags$div(
-                  class = "alert alert-warning",
+                div(
+                  class = "ts-block-help-text",
                   style = "margin-top: 10px;",
-                  icon("info-circle"),
-                  "This is univariate time series data. Series selection is only available for multivariate data.",
-                  tags$br(),
-                  tags$small(
-                    "Try with a multivariate dataset like EuStockMarkets or Seatbelts."
-                  )
+                  "This is univariate time series data. Series selection is only available for multivariate data. Try with a multivariate dataset like EuStockMarkets or Seatbelts."
                 )
               } else {
                 NULL
@@ -252,52 +249,8 @@ new_ts_select_block <- function(series = NULL, multiple = TRUE, ...) {
     },
     function(id) {
       tagList(
-        # Add responsive CSS
-        tags$style(HTML(
-          "
-          .ts-block-container {
-            width: 100%;
-            margin: 0px;
-            padding: 0px;
-            padding-bottom: 15px;
-          }
-
-          .ts-block-form-grid {
-            display: grid;
-            gap: 15px;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-          }
-
-          .ts-block-section {
-            display: contents;
-          }
-
-          .ts-block-section h4 {
-            grid-column: 1 / -1;
-            margin-top: 5px;
-            margin-bottom: 0px;
-            font-size: 1.1rem;
-            font-weight: 600;
-            color: #333;
-          }
-
-          .ts-block-input-wrapper {
-            width: 100%;
-          }
-
-          .ts-block-input-wrapper .form-group {
-            margin-bottom: 10px;
-          }
-
-          .ts-block-help-text {
-            grid-column: 1 / -1;
-            margin-top: 0px;
-            padding-top: 0px;
-            font-size: 0.875rem;
-            color: #666;
-          }
-          "
-        )),
+        # Centralized responsive CSS
+        ts_responsive_css(),
 
         div(
           class = "ts-block-container",

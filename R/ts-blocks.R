@@ -88,7 +88,6 @@ block_output.ts_block <- function(x, result, session) {
       colors = colors_to_use,
       strokeWidth = 2.5
     )
-    dygraph <- dygraphs::dyRangeSelector(dygraph, height = 20)
 
     dygraph
   })

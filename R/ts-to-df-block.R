@@ -61,10 +61,7 @@ new_ts_to_df_block <- function(format = "long", ...) {
               "Unknown format"
             )
             
-            helpText(
-              icon("info-circle"),
-              desc
-            )
+            helpText(desc)
           })
           
           # Show data preview info
@@ -114,40 +111,8 @@ new_ts_to_df_block <- function(format = "long", ...) {
     },
     function(id) {
       tagList(
-        # Add responsive CSS
-        tags$style(HTML(
-          "
-          .ts-to-df-container {
-            width: 100%;
-            margin: 0px;
-            padding-bottom: 15px;
-          }
-          
-          .ts-to-df-form-grid {
-            display: grid;
-            gap: 15px;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-          }
-          
-          .ts-to-df-section {
-            padding: 10px;
-            background-color: #f8f9fa;
-            border-radius: 4px;
-          }
-          
-          .ts-to-df-section h4 {
-            margin-top: 0;
-            margin-bottom: 10px;
-            font-size: 1.1rem;
-            font-weight: 600;
-            color: #333;
-          }
-          
-          .ts-to-df-input-wrapper {
-            margin-bottom: 10px;
-          }
-          "
-        )),
+        # Centralized responsive CSS
+        ts_responsive_css(),
         div(
           class = "ts-to-df-container",
           div(

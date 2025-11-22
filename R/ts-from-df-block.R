@@ -54,7 +54,6 @@ new_ts_from_df_block <- function(...) {
             
             if (length(time_cols) > 0) {
               helpText(
-                icon("info-circle"),
                 sprintf(
                   "Converting %d series from wide to long format. Time column: %s",
                   length(numeric_cols),
@@ -63,7 +62,6 @@ new_ts_from_df_block <- function(...) {
               )
             } else {
               helpText(
-                icon("warning"),
                 "No time column detected. tsbox::ts_long() will attempt conversion."
               )
             }
@@ -81,23 +79,8 @@ new_ts_from_df_block <- function(...) {
     },
     function(id) {
       tagList(
-        # Add responsive CSS
-        tags$style(HTML(
-          "
-          .ts-from-df-container {
-            width: 100%;
-            margin: 0px;
-            padding-bottom: 15px;
-          }
-          
-          .ts-from-df-info {
-            padding: 10px;
-            background-color: #f8f9fa;
-            border-radius: 4px;
-            margin-bottom: 10px;
-          }
-          "
-        )),
+        # Centralized responsive CSS
+        ts_responsive_css(),
         div(
           class = "ts-from-df-container",
           div(
