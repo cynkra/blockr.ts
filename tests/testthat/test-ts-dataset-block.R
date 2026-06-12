@@ -177,3 +177,63 @@ test_that("ts_dataset_block - multiple univariate datasets", {
     )
   }
 })
+
+# UI Input Tests - test that setInputs changes state
+test_that("ts_dataset_block - dataset input updates state", {
+  block <- new_ts_dataset_block(dataset = "AirPassengers")
+
+  testServer(
+    block$expr_server,
+    args = list(),
+    {
+      session$flushReact()
+
+      result <- session$returned
+      expect_true(is.reactive(result$expr))
+      expect_true(is.list(result$state))
+
+      # Check initial dataset state
+      expect_equal(result$state$dataset(), "AirPassengers")
+
+      # Change dataset input
+      session$setInputs(dataset = "Nile")
+      session$flushReact()
+
+      # Check state updated
+      expect_equal(result$state$dataset(), "Nile")
+
+      # Change to another dataset
+      session$setInputs(dataset = "co2")
+      session$flushReact()
+      expect_equal(result$state$dataset(), "co2")
+    }
+  )
+})
+
+test_that("ts_dataset_block - dataset input updates expression", {
+  block <- new_ts_dataset_block(dataset = "AirPassengers")
+
+  testServer(
+    block$expr_server,
+    args = list(),
+    {
+      session$flushReact()
+
+      result <- session$returned
+
+      # Check initial expression
+      expr_result <- result$expr()
+      expr_text <- deparse(expr_result)
+      expect_true(any(grepl("AirPassengers", expr_text)))
+
+      # Change dataset
+      session$setInputs(dataset = "EuStockMarkets")
+      session$flushReact()
+
+      # Expression should now use EuStockMarkets
+      expr_result <- result$expr()
+      expr_text <- deparse(expr_result)
+      expect_true(any(grepl("EuStockMarkets", expr_text)))
+    }
+  )
+})

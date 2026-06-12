@@ -227,6 +227,7 @@ new_ts_scale_block <- function(method = "index", base = NULL, ...) {
       # Validate that input is a data.frame
       stopifnot(is.data.frame(data))
     },
+    allow_empty_state = "base",
     class = c("ts_scale_block"),
     ...
   )

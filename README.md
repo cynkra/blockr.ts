@@ -65,7 +65,7 @@ blockr.core::serve(
 #### `new_ts_change_block()`
 Calculate various types of changes: percentage, differences, year-over-year.
 
-![Change Block](man/figures/ts_change_block.png)
+![Change Block](man/figures/ts-change-block.png)
 
 ```r
 blockr.core::serve(
@@ -84,7 +84,7 @@ blockr.core::serve(
 #### `new_ts_frequency_block()`
 Convert time series between temporal granularities with smart aggregation.
 
-![Frequency Block](man/figures/ts_frequency_block.png)
+![Frequency Block](man/figures/ts-frequency-block.png)
 
 ```r
 blockr.core::serve(
@@ -101,7 +101,7 @@ blockr.core::serve(
 #### `new_ts_select_block()`
 Select specific series from multivariate time series data.
 
-![Select Block](man/figures/ts_select_block.png)
+![Select Block](man/figures/ts-select-block.png)
 
 ```r
 multivariate_data <- tsbox::ts_c(datasets::mdeaths, datasets::fdeaths)
@@ -115,7 +115,7 @@ blockr.core::serve(
 #### `new_ts_lag_block()`
 Shift time series forward (lag) or backward (lead).
 
-![Lag Block](man/figures/ts_lag_block.png)
+![Lag Block](man/figures/ts-lag-block.png)
 
 ```r
 blockr.core::serve(
@@ -127,7 +127,7 @@ blockr.core::serve(
 #### `new_ts_span_block()`
 Filter time series to specific date ranges with an intuitive range slider.
 
-![Span Block](man/figures/ts_span_block.png)
+![Span Block](man/figures/ts-span-block.png)
 
 ```r
 blockr.core::serve(
@@ -141,7 +141,7 @@ blockr.core::serve(
 #### `new_ts_scale_block()`
 Scale, normalize, or index time series for comparison.
 
-![Scale Block](man/figures/ts_scale_block.png)
+![Scale Block](man/figures/ts-scale-block.png)
 
 ```r
 blockr.core::serve(
@@ -158,7 +158,7 @@ blockr.core::serve(
 #### `new_ts_decompose_block()`
 Extract trend, seasonal, and remainder components.
 
-![Decompose Block](man/figures/ts_decompose_block.png)
+![Decompose Block](man/figures/ts-decompose-block.png)
 
 ```r
 blockr.core::serve(
@@ -170,7 +170,7 @@ blockr.core::serve(
 #### `new_ts_forecast_block()`
 Generate forecasts with confidence intervals.
 
-![Forecast Block](man/figures/ts_forecast_block.png)
+![Forecast Block](man/figures/ts-forecast-block.png)
 
 ```r
 blockr.core::serve(
@@ -182,7 +182,7 @@ blockr.core::serve(
 #### `new_ts_pca_block()`
 Principal Component Analysis for multivariate time series.
 
-![PCA Block](man/figures/ts_pca_block.png)
+![PCA Block](man/figures/ts-pca-block.png)
 
 ```r
 blockr.core::serve(
@@ -223,50 +223,62 @@ blockr.core::serve(
 )
 ```
 
-### Advanced DAG Board Pipeline
+### Building Pipelines
 
-For complex analyses with multiple branches, use the DAG board:
+The recommended approach uses `blockr::run_app()` with `blockr.dock` for the modern dock-based UI with the DAG extension:
+
+#### Simple Pipeline
+
+```r
+library(blockr)
+library(blockr.ts)
+
+run_app(
+  blocks = c(
+    data = new_ts_dataset_block(dataset = "AirPassengers"),
+    change = new_ts_change_block(method = "pcy")
+  ),
+  links = list(from = "data", to = "change", input = "data")
+)
+```
+
+#### Comprehensive Time Series Workflow
+
+A full analysis pipeline demonstrating multiple transformations:
+
+```r
+library(blockr)
+library(blockr.ts)
+
+run_app(
+  blocks = c(
+    data = new_ts_dataset_block(dataset = "EuStockMarkets"),
+    select = new_ts_select_block(series = c("DAX", "FTSE")),
+    scale = new_ts_scale_block(method = "index"),
+    change = new_ts_change_block(method = "pcy"),
+    freq = new_ts_frequency_block(to = "quarter", aggregate = "mean")
+  ),
+  links = list(
+    list(from = "data", to = "select", input = "data"),
+    list(from = "select", to = "scale", input = "data"),
+    list(from = "scale", to = "change", input = "data"),
+    list(from = "change", to = "freq", input = "data")
+  )
+)
+```
+
+#### Alternative: Direct serve() approach
+
+For quick testing without the full dock UI:
 
 ```r
 library(blockr.core)
-library(blockr.ui)
-library(blockr.dplyr)
-library(blockr.ggplot)
-library(blockr.ai)
+library(blockr.ts)
 
-# Create comprehensive analysis board
-ts_board <- blockr.ui::new_dag_board(
-  blocks = c(
-    # Data sources
-    air = new_ts_dataset_block(dataset = "AirPassengers"),
-    stocks = new_ts_dataset_block(dataset = "EuStockMarkets"),
-
-    # AirPassengers branch
-    air_decomp = new_ts_decompose_block(component = "seasonal_adjusted"),
-    air_change = new_ts_change_block(method = "pcy"),
-    air_forecast = new_ts_forecast_block(horizon = 24),
-
-    # Stocks branch
-    stock_select = new_ts_select_block(series = c("DAX", "FTSE")),
-    stock_scale = new_ts_scale_block(method = "index"),
-    stock_pca = new_ts_pca_block(n_components = 2)
-  ),
-
-  links = c(
-    # Connect AirPassengers pipeline
-    new_link("air", "air_decomp", "data"),
-    new_link("air_decomp", "air_change", "data"),
-    new_link("air_change", "air_forecast", "data"),
-
-    # Connect stocks pipeline
-    new_link("stocks", "stock_select", "data"),
-    new_link("stock_select", "stock_scale", "data"),
-    new_link("stock_scale", "stock_pca", "data")
-  )
+blockr.core::serve(
+  new_ts_change_block(method = "pcy"),
+  data = list(data = tsbox::ts_tbl(datasets::AirPassengers))
 )
-
-# Serve the board
-blockr.core::serve(ts_board)
 ```
 
 ## See Also

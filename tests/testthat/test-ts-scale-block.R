@@ -92,9 +92,9 @@ test_that("ts_scale_block - index method with base date", {
       expect_equal(result$time, expected$time)
       expect_equal(result$value, expected$value, tolerance = 0.001)
 
-      # Verify index property - value at base date should be 100
+      # Verify index property - value at base date should be 1 (tsbox default)
       base_row <- result[result$time == as.Date("1955-01-01"), ]
-      expect_equal(base_row$value, 100, tolerance = 0.001)
+      expect_equal(base_row$value, 1, tolerance = 0.001)
     },
     args = list(
       x = block,
@@ -285,5 +285,82 @@ test_that("ts_scale_block - handles short time series", {
       x = block,
       data = list(data = function() short_data)
     )
+  )
+})
+
+# UI Input Tests - test that setInputs changes state and expression
+test_that("ts_scale_block - method input updates state", {
+  test_data <- reactive(tsbox::ts_tbl(datasets::AirPassengers))
+  block <- new_ts_scale_block(method = "normalize")
+
+  testServer(
+    block$expr_server,
+    args = list(data = test_data),
+    {
+      session$flushReact()
+
+      result <- session$returned
+      expect_true(is.reactive(result$expr))
+      expect_true(is.list(result$state))
+
+      # Set initial input
+      session$setInputs(method = "normalize")
+      session$flushReact()
+
+      # Check state
+      expect_equal(result$state$method(), "normalize")
+
+      # Change to index
+      session$setInputs(method = "index")
+      session$flushReact()
+      expect_equal(result$state$method(), "index")
+
+      # Change to minmax
+      session$setInputs(method = "minmax")
+      session$flushReact()
+      expect_equal(result$state$method(), "minmax")
+    }
+  )
+})
+
+test_that("ts_scale_block - method input updates expression", {
+  test_data <- reactive(tsbox::ts_tbl(datasets::AirPassengers))
+  block <- new_ts_scale_block(method = "normalize")
+
+  testServer(
+    block$expr_server,
+    args = list(data = test_data),
+    {
+      session$flushReact()
+
+      result <- session$returned
+
+      # Set normalize method
+      session$setInputs(method = "normalize")
+      session$flushReact()
+
+      # Check expression contains ts_scale
+      expr_result <- result$expr()
+      expr_text <- deparse(expr_result)
+      expect_true(any(grepl("ts_scale", expr_text)))
+
+      # Change to index
+      session$setInputs(method = "index")
+      session$flushReact()
+
+      # Expression should now contain ts_index
+      expr_result <- result$expr()
+      expr_text <- deparse(expr_result)
+      expect_true(any(grepl("ts_index", expr_text)))
+
+      # Change to minmax - uses custom calculation
+      session$setInputs(method = "minmax")
+      session$flushReact()
+
+      expr_result <- result$expr()
+      expr_text <- deparse(expr_result)
+      # Minmax uses min/max calculation
+      expect_true(any(grepl("min", expr_text)) || any(grepl("max", expr_text)))
+    }
   )
 })

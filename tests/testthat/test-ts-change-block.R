@@ -271,3 +271,120 @@ test_that("ts_change_block - different methods produce different results", {
     )
   )
 })
+
+# UI Input Tests - test that setInputs changes state and expression
+test_that("ts_change_block - method input updates state", {
+  test_data <- reactive(tsbox::ts_tbl(datasets::AirPassengers))
+  block <- new_ts_change_block(method = "pc")
+
+  testServer(
+    block$expr_server,
+    args = list(data = test_data),
+    {
+      session$flushReact()
+
+      result <- session$returned
+      expect_true(is.reactive(result$expr))
+      expect_true(is.list(result$state))
+
+      # Set initial input
+      session$setInputs(method = "pc")
+      session$flushReact()
+
+      # Check state has method
+      expect_equal(result$state$method(), "pc")
+
+      # Change method input
+      session$setInputs(method = "diff")
+      session$flushReact()
+
+      # State should update
+      expect_equal(result$state$method(), "diff")
+
+      # Change to pcy
+      session$setInputs(method = "pcy")
+      session$flushReact()
+      expect_equal(result$state$method(), "pcy")
+    }
+  )
+})
+
+test_that("ts_change_block - method input updates expression", {
+  test_data <- reactive(tsbox::ts_tbl(datasets::AirPassengers))
+  block <- new_ts_change_block(method = "pc")
+
+  testServer(
+    block$expr_server,
+    args = list(data = test_data),
+    {
+      session$flushReact()
+
+      result <- session$returned
+
+      # Set pc method
+      session$setInputs(method = "pc")
+      session$flushReact()
+
+      # Check expression contains ts_pc
+      expr_result <- result$expr()
+      expr_text <- deparse(expr_result)
+      expect_true(any(grepl("ts_pc", expr_text)))
+
+      # Change to diff method
+      session$setInputs(method = "diff")
+      session$flushReact()
+
+      # Expression should now contain ts_diff
+      expr_result <- result$expr()
+      expr_text <- deparse(expr_result)
+      expect_true(any(grepl("ts_diff", expr_text)))
+
+      # Change to pcy method
+      session$setInputs(method = "pcy")
+      session$flushReact()
+
+      # Expression should now contain ts_pcy
+      expr_result <- result$expr()
+      expr_text <- deparse(expr_result)
+      expect_true(any(grepl("ts_pcy", expr_text)))
+    }
+  )
+})
+
+test_that("ts_change_block - all methods produce correct expressions", {
+  test_data <- reactive(tsbox::ts_tbl(datasets::AirPassengers))
+  block <- new_ts_change_block(method = "pc")
+
+  testServer(
+    block$expr_server,
+    args = list(data = test_data),
+    {
+      session$flushReact()
+
+      result <- session$returned
+
+      # Test all methods
+      methods_to_funcs <- list(
+        pc = "ts_pc",
+        pcy = "ts_pcy",
+        pca = "ts_pca",
+        diff = "ts_diff",
+        diffy = "ts_diffy"
+      )
+
+      for (m in names(methods_to_funcs)) {
+        session$setInputs(method = m)
+        session$flushReact()
+
+        expr_result <- result$expr()
+        expr_text <- deparse(expr_result)
+        expected_func <- methods_to_funcs[[m]]
+
+        expect_true(
+          any(grepl(expected_func, expr_text)),
+          info = paste("Method:", m, "should contain", expected_func)
+        )
+      }
+    }
+  )
+})

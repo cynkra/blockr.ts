@@ -209,3 +209,84 @@ test_that("ts_lag_block - handles short time series", {
     )
   )
 })
+
+# UI Input Tests - test that setInputs changes state and expression
+test_that("ts_lag_block - by input updates state", {
+  test_data <- reactive(tsbox::ts_tbl(datasets::AirPassengers))
+  block <- new_ts_lag_block(by = 1L)
+
+  testServer(
+    block$expr_server,
+    args = list(data = test_data),
+    {
+      session$flushReact()
+
+      result <- session$returned
+      expect_true(is.reactive(result$expr))
+      expect_true(is.list(result$state))
+
+      # Set initial input
+      session$setInputs(by = 1)
+      session$flushReact()
+
+      # Check state
+      expect_equal(result$state$by(), 1L)
+
+      # Change to 3
+      session$setInputs(by = 3)
+      session$flushReact()
+      expect_equal(result$state$by(), 3L)
+
+      # Change to negative (lead)
+      session$setInputs(by = -2)
+      session$flushReact()
+      expect_equal(result$state$by(), -2L)
+
+      # Change to 0
+      session$setInputs(by = 0)
+      session$flushReact()
+      expect_equal(result$state$by(), 0L)
+    }
+  )
+})
+
+test_that("ts_lag_block - by input updates expression", {
+  test_data <- reactive(tsbox::ts_tbl(datasets::AirPassengers))
+  block <- new_ts_lag_block(by = 1L)
+
+  testServer(
+    block$expr_server,
+    args = list(data = test_data),
+    {
+      session$flushReact()
+
+      result <- session$returned
+
+      # Set by = 1
+      session$setInputs(by = 1)
+      session$flushReact()
+
+      # Check expression
+      expr_result <- result$expr()
+      expr_text <- deparse(expr_result)
+      expect_true(any(grepl("by = 1L", expr_text)))
+
+      # Change to by = 5
+      session$setInputs(by = 5)
+      session$flushReact()
+
+      # Expression should update
+      expr_result <- result$expr()
+      expr_text <- deparse(expr_result)
+      expect_true(any(grepl("by = 5L", expr_text)))
+
+      # Change to negative
+      session$setInputs(by = -3)
+      session$flushReact()
+
+      expr_result <- result$expr()
+      expr_text <- deparse(expr_result)
+      expect_true(any(grepl("by = -3L", expr_text)))
+    }
+  )
+})

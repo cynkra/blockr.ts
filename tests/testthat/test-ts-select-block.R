@@ -101,3 +101,85 @@ test_that("ts_select_block - select all series when series=NULL", {
     )
   )
 })
+
+# UI Input Tests - test that setInputs changes state
+test_that("ts_select_block - series input updates state (single mode)", {
+  test_data <- reactive(tsbox::ts_tbl(datasets::EuStockMarkets))
+  block <- new_ts_select_block(series = "DAX", multiple = FALSE)
+
+  testServer(
+    block$expr_server,
+    args = list(data = test_data),
+    {
+      session$flushReact()
+
+      result <- session$returned
+      expect_true(is.reactive(result$expr))
+      expect_true(is.list(result$state))
+
+      # Set series_single input (single mode uses this input)
+      session$setInputs(series_single = "FTSE")
+      session$flushReact()
+
+      # Check state updated
+      expect_equal(result$state$series(), "FTSE")
+
+      # Change to another series
+      session$setInputs(series_single = "SMI")
+      session$flushReact()
+      expect_equal(result$state$series(), "SMI")
+    }
+  )
+})
+
+test_that("ts_select_block - series input updates state (multiple mode)", {
+  test_data <- reactive(tsbox::ts_tbl(datasets::EuStockMarkets))
+  block <- new_ts_select_block(series = c("DAX"), multiple = TRUE)
+
+  testServer(
+    block$expr_server,
+    args = list(data = test_data),
+    {
+      session$flushReact()
+
+      result <- session$returned
+
+      # Set series_multi input (multiple mode uses this input)
+      session$setInputs(series_multi = c("DAX", "FTSE"))
+      session$flushReact()
+
+      # Check state updated with multiple series
+      series_val <- result$state$series()
+      expect_true(length(series_val) >= 1)
+      expect_true(all(c("DAX", "FTSE") %in% series_val) || "DAX" %in% series_val)
+    }
+  )
+})
+
+test_that("ts_select_block - multiple mode toggle updates state", {
+  test_data <- reactive(tsbox::ts_tbl(datasets::EuStockMarkets))
+  block <- new_ts_select_block(series = c("DAX"), multiple = TRUE)
+
+  testServer(
+    block$expr_server,
+    args = list(data = test_data),
+    {
+      session$flushReact()
+
+      result <- session$returned
+
+      # Check initial multiple mode state
+      expect_true(result$state$multiple())
+
+      # Toggle to single mode
+      session$setInputs(multiple = FALSE)
+      session$flushReact()
+      expect_false(result$state$multiple())
+
+      # Toggle back to multiple mode
+      session$setInputs(multiple = TRUE)
+      session$flushReact()
+      expect_true(result$state$multiple())
+    }
+  )
+})

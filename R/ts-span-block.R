@@ -244,8 +244,8 @@ new_ts_span_block <- function(start = NULL, end = NULL, ...) {
 
               # Build expression based on NULL values
               if (is.null(start_val) && is.null(end_val)) {
-                # No filtering - just return data
-                parse(text = "data")[[1]]
+                # No filtering - just return data as-is (use identity for proper call type)
+                parse(text = "identity(data)")[[1]]
               } else if (!is.null(start_val) && !is.null(end_val)) {
                 # Both start and end specified
                 expr_text <- glue::glue(
@@ -312,6 +312,7 @@ new_ts_span_block <- function(start = NULL, end = NULL, ...) {
       # Validate that input is a data.frame
       stopifnot(is.data.frame(data))
     },
+    allow_empty_state = c("start", "end"),
     class = "ts_span_block",
     ...
   )

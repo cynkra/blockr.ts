@@ -104,7 +104,8 @@ test_that("ts_from_df_block - handles multiple series", {
 
       # Test structure
       expect_true(is.data.frame(result))
-      expect_true("time" %in% names(result))
+      # ts_long preserves original time column name (date in this case)
+      expect_true("date" %in% names(result))
       expect_true("value" %in% names(result))
       expect_true("id" %in% names(result))
 
@@ -147,7 +148,8 @@ test_that("ts_from_df_block - works with POSIXct time column", {
 
       # Test structure
       expect_true(is.data.frame(result))
-      expect_true("time" %in% names(result))
+      # ts_long preserves original time column name (timestamp in this case)
+      expect_true("timestamp" %in% names(result))
       expect_true("value" %in% names(result))
 
       # Test dimensions

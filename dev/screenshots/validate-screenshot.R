@@ -4,15 +4,19 @@
 #' takes a screenshot, and returns the result. It's designed to be a
 #' simple, direct way to test whether a block implementation works correctly.
 #'
-#' @param block A blockr block object (e.g., from new_filter_expr_block())
-#' @param data Data to use for the block (default: mtcars)
+#' @param block A blockr block object (e.g., from new_ts_change_block())
+#' @param data Data to use for the block (default: NULL for data blocks)
 #' @param filename Name for the screenshot file (default: auto-generated)
 #' @param output_dir Directory to save screenshot (default: "man/figures")
-#' @param width Screenshot width in pixels (default: 800)
-#' @param height Screenshot height in pixels (default: 600)
-#' @param delay Seconds to wait for app to load (default: 5)
+#' @param width Screenshot width in pixels (default: 1400)
+#' @param height Screenshot height in pixels (default: 700)
+#' @param delay Seconds to wait for app to load (default: 3)
 #' @param expand_advanced Logical. If TRUE, attempts to click "advanced options"
 #'   toggle before taking screenshot (default: FALSE)
+#' @param use_dock Logical. If TRUE, uses blockr.dock for improved styling
+#'   and automatically crops to the block panel (default: TRUE)
+#' @param data_block A data block to use as the data source (default: NULL).
+#'   If provided, this block will be used instead of new_dataset_block.
 #' @param verbose Print progress messages (default: TRUE)
 #'
 #' @return A list with components:
@@ -23,22 +27,15 @@
 #'
 #' @examples
 #' \dontrun{
-#' # Simple usage with default data (mtcars)
+#' # Simple usage with a TS data block
 #' result <- validate_block_screenshot(
-#'   new_filter_expr_block("mpg > 20")
+#'   new_ts_dataset_block(dataset = "AirPassengers")
 #' )
 #'
-#' # With custom data
+#' # Transform block with custom data source
 #' result <- validate_block_screenshot(
-#'   new_select_block(columns = c("Species")),
-#'   data = iris,
-#'   filename = "iris-select.png"
-#' )
-#'
-#' # With advanced options expanded
-#' result <- validate_block_screenshot(
-#'   new_summarize_block(),
-#'   expand_advanced = TRUE
+#'   new_ts_change_block(method = "pcy"),
+#'   data_block = new_ts_dataset_block(dataset = "AirPassengers")
 #' )
 #'
 #' # Check if successful
@@ -52,13 +49,15 @@
 #' @export
 validate_block_screenshot <- function(
   block,
-  data = datasets::mtcars,
+  data = NULL,
   filename = NULL,
   output_dir = "man/figures",
-  width = 800,
-  height = 600,
-  delay = 5,
+  width = 1400,
+  height = 700,
+  delay = 3,
   expand_advanced = FALSE,
+  use_dock = FALSE,
+  data_block = NULL,
   verbose = TRUE
 ) {
   # Set NOT_CRAN environment variable for shinytest2
@@ -124,19 +123,17 @@ validate_block_screenshot <- function(
     ))
   }
 
-  # Wrap data in the expected list format
-  # Check if data is already a properly formatted list (e.g., for join blocks with x and y)
-  if (is.list(data) && !is.data.frame(data)) {
-    # Already a list - check if it has expected names like x, y, or data
-    if (any(c("x", "y", "data") %in% names(data))) {
-      data_list <- data
-    } else {
-      # List but not properly named - wrap it
-      data_list <- list(data = data)
-    }
-  } else {
-    # Single data frame or other object
-    data_list <- list(data = data)
+  # Check for magick package if using dock mode (needed for cropping)
+  if (use_dock && !requireNamespace("magick", quietly = TRUE)) {
+    return(list(
+      success = FALSE,
+      path = NULL,
+      error = paste(
+        "magick package is required for dock mode cropping.",
+        "Install with: install.packages('magick')"
+      ),
+      filename = filename
+    ))
   }
 
   # Try to create the screenshot
@@ -146,38 +143,145 @@ validate_block_screenshot <- function(
       temp_dir <- tempfile("blockr_validation_")
       dir.create(temp_dir)
 
-      # Save data to RDS file to avoid deparse issues
-      saveRDS(data_list, file.path(temp_dir, "data.rds"))
-
       # Save block to RDS file to avoid deparse issues
       saveRDS(block, file.path(temp_dir, "block.rds"))
 
-      # Create minimal app.R file
-      app_content <- sprintf(
-        '
-library(blockr.core)
+      # Save data - wrap in list format expected by serve()
+      if (is.list(data) && !is.data.frame(data)) {
+        data_list <- data
+      } else if (!is.null(data)) {
+        data_list <- list(data = data)
+      } else {
+        data_list <- list(data = NULL)
+      }
+      saveRDS(data_list, file.path(temp_dir, "data.rds"))
 
-# Load the blockr.dplyr package
-# Try to load from development first, fall back to installed version
+      # Save data_block if provided (for dock mode)
+      if (!is.null(data_block)) {
+        saveRDS(data_block, file.path(temp_dir, "data_block.rds"))
+      }
+
+      # Create app.R file - different content based on use_dock and block type
+      if (use_dock) {
+        # Check if we have a data_block (transform block case)
+        has_data_block <- !is.null(data_block)
+
+        if (has_data_block) {
+          # Transform block with separate data source
+          app_content <- sprintf(
+            '
+library(blockr.core)
+library(blockr.dock)
+
+# Load the blockr.ts package
 tryCatch(
   devtools::load_all("%s"),
   error = function(e) {
-    library(blockr.dplyr)
+    library(blockr.ts)
   }
 )
 
-# Load data and block
-data <- readRDS("data.rds")
+# Load blocks
+block <- readRDS("block.rds")
+data_block <- readRDS("data_block.rds")
+
+# Run the app using dock board with data source and transform block
+blockr.core::serve(
+  blockr.dock::new_dock_board(
+    blocks = c(
+      a = data_block,
+      b = block
+    ),
+    links = list(from = "a", to = "b", input = "data")
+  )
+)
+            ',
+            normalizePath(".")
+          )
+        } else {
+          # Data block - just show the single block
+          app_content <- sprintf(
+            '
+library(blockr.core)
+library(blockr.dock)
+
+# Load the blockr.ts package
+tryCatch(
+  devtools::load_all("%s"),
+  error = function(e) {
+    library(blockr.ts)
+  }
+)
+
+# Load block
 block <- readRDS("block.rds")
 
-# Run the app
+# Run the app using dock board with just the data block
 blockr.core::serve(
-  block,
-  data = data
+  blockr.dock::new_dock_board(
+    blocks = c(
+      a = block
+    )
+  )
 )
-        ',
-        normalizePath(".")
-      )
+            ',
+            normalizePath(".")
+          )
+        }
+      } else {
+        # Use blockr.core directly (without dock) - serve single block
+        # This gives a clean, focused view of just the block being documented
+
+        # Check if we have data (transform block) or not (data block)
+        has_data <- !is.null(data) && !(is.list(data) && is.null(data$data))
+
+        if (has_data) {
+          # Transform block with data
+          app_content <- sprintf(
+            '
+library(blockr.core)
+
+# Load the blockr.ts package
+tryCatch(
+  devtools::load_all("%s"),
+  error = function(e) {
+    library(blockr.ts)
+  }
+)
+
+# Load block and data
+block <- readRDS("block.rds")
+data_list <- readRDS("data.rds")
+
+# Serve single block with data
+blockr.core::serve(block, data = data_list)
+            ',
+            normalizePath(".")
+          )
+        } else {
+          # Data block - no input data needed
+          app_content <- sprintf(
+            '
+library(blockr.core)
+
+# Load the blockr.ts package
+tryCatch(
+  devtools::load_all("%s"),
+  error = function(e) {
+    library(blockr.ts)
+  }
+)
+
+# Load block
+block <- readRDS("block.rds")
+
+# Serve data block directly
+blockr.core::serve(block)
+            ',
+            normalizePath(".")
+          )
+        }
+      }
 
       writeLines(app_content, file.path(temp_dir, "app.R"))
 
@@ -198,30 +302,17 @@ blockr.core::serve(
       if (expand_advanced) {
         tryCatch(
           {
-            # Try to find and click the advanced toggle
-            # The selector may vary, try common patterns
-            advanced_selectors <- c(
-              ".advanced-toggle",
-              "[id$='advanced-toggle']",
-              "[onclick*='advanced']"
+            # Click all advanced toggles on the page
+            app$run_js(
+              "
+              var toggles = document.querySelectorAll('.block-advanced-toggle');
+              toggles.forEach(function(toggle) {
+                toggle.click();
+              });
+              "
             )
-
-            for (selector in advanced_selectors) {
-              tryCatch(
-                {
-                  app$run_js(sprintf(
-                    "document.querySelector('%s')?.click();",
-                    selector
-                  ))
-                  # Wait for animation/expansion
-                  Sys.sleep(0.5)
-                  break
-                },
-                error = function(e) {
-                  # Try next selector
-                }
-              )
-            }
+            # Wait for animation/expansion
+            Sys.sleep(0.5)
           },
           error = function(e) {
             # Block doesn't have advanced options - that's fine
@@ -239,6 +330,97 @@ blockr.core::serve(
 
       # Take screenshot
       app$get_screenshot(output_path)
+
+      # If using dock mode, crop to just the panel content
+      if (use_dock && file.exists(output_path)) {
+        # Get the bounding box of the panel using JavaScript
+        # Try multiple selectors in order of preference
+        # Note: use get_js instead of run_js to get the return value
+        panel_bounds <- tryCatch(
+          {
+            app$get_js(
+              "
+              (function() {
+                // Find the panel that contains actual block content (the right panel)
+                // In default dock layout: left = extensions (empty), right = blocks
+                var groupViews = document.querySelectorAll('.dv-groupview');
+
+                // Find the groupview that contains block content
+                // Look for the one with actual shiny content inside
+                for (var i = 0; i < groupViews.length; i++) {
+                  var panel = groupViews[i];
+                  // Check if this panel has actual content (not just empty toolbar)
+                  var hasContent = panel.querySelector('.shiny-html-output') ||
+                                   panel.querySelector('.block-container') ||
+                                   panel.querySelector('[class*=\"blockr\"]') ||
+                                   panel.querySelector('.form-group') ||
+                                   panel.querySelector('.selectize-control');
+
+                  if (hasContent && panel.offsetWidth > 100) {
+                    var rect = panel.getBoundingClientRect();
+                    return {
+                      x: Math.round(rect.left),
+                      y: Math.round(rect.top),
+                      width: Math.round(rect.width),
+                      height: Math.round(rect.height),
+                      selector: '.dv-groupview (with content)'
+                    };
+                  }
+                }
+
+                // Fallback: get the last (rightmost) groupview
+                if (groupViews.length > 0) {
+                  var lastPanel = groupViews[groupViews.length - 1];
+                  var rect = lastPanel.getBoundingClientRect();
+                  return {
+                    x: Math.round(rect.left),
+                    y: Math.round(rect.top),
+                    width: Math.round(rect.width),
+                    height: Math.round(rect.height),
+                    selector: '.dv-groupview (last)'
+                  };
+                }
+
+                return null;
+              })()
+              "
+            )
+          },
+          error = function(e) NULL
+        )
+
+        if (!is.null(panel_bounds) && !is.null(panel_bounds$width)) {
+          if (verbose) {
+            selector_info <- if (!is.null(panel_bounds$selector)) {
+              paste0(" (selector: ", panel_bounds$selector, ")")
+            } else {
+              ""
+            }
+            cat(sprintf(
+              "  Cropping to panel bounds: x=%d, y=%d, w=%d, h=%d%s\n",
+              panel_bounds$x, panel_bounds$y,
+              panel_bounds$width, panel_bounds$height,
+              selector_info
+            ))
+          }
+
+          # Use magick to crop the image
+          img <- magick::image_read(output_path)
+          # Add small padding around the panel
+          padding <- 0
+          crop_geometry <- sprintf(
+            "%dx%d+%d+%d",
+            panel_bounds$width + padding * 2,
+            panel_bounds$height + padding * 2,
+            max(0, panel_bounds$x - padding),
+            max(0, panel_bounds$y - padding)
+          )
+          img_cropped <- magick::image_crop(img, crop_geometry)
+          magick::image_write(img_cropped, output_path)
+        } else if (verbose) {
+          cat("  Warning: Could not detect panel bounds for cropping\n")
+        }
+      }
 
       # Stop the app and cleanup
       app$stop()
@@ -290,134 +472,4 @@ blockr.core::serve(
   )
 
   return(result)
-}
-
-#' Batch validate multiple blocks with screenshots
-#'
-#' Convenience function to validate multiple blocks at once and generate
-#' a summary report of which blocks work and which don't.
-#'
-#' @param blocks Named list of blocks to validate (can also be a list of lists
-#'   with 'block' and 'expand_advanced' elements)
-#' @param data Data to use for all blocks (can also be a named list
-#'   matching block names)
-#' @param output_dir Directory to save screenshots (default: "man/figures")
-#' @param verbose Print progress messages (default: TRUE)
-#'
-#' @return A data frame with validation results for each block
-#'
-#' @examples
-#' \dontrun{
-#' # Test multiple blocks
-#' blocks <- list(
-#'   filter = new_filter_expr_block("mpg > 20"),
-#'   select = new_select_block(columns = c("mpg", "cyl")),
-#'   arrange = new_arrange_block(columns = "mpg")
-#' )
-#'
-#' results <- validate_blocks_batch(blocks)
-#' print(results)
-#'
-#' # With advanced options for specific blocks
-#' blocks <- list(
-#'   `summarize-block` = list(
-#'     block = new_summarize_block(),
-#'     expand_advanced = TRUE
-#'   ),
-#'   `filter-block` = new_filter_expr_block("mpg > 20")
-#' )
-#' results <- validate_blocks_batch(blocks)
-#' }
-#'
-#' @export
-validate_blocks_batch <- function(
-  blocks,
-  data = datasets::mtcars,
-  output_dir = "man/figures",
-  verbose = TRUE
-) {
-  if (!is.list(blocks)) {
-    stop("blocks must be a list")
-  }
-
-  # Get block names
-  block_names <- names(blocks)
-  if (is.null(block_names)) {
-    block_names <- paste0("block_", seq_along(blocks))
-    names(blocks) <- block_names
-  }
-
-  # Prepare data for each block
-  if (is.list(data) && !is.data.frame(data)) {
-    # data is a named list
-    data_list <- data
-  } else {
-    # data is a single dataset, use for all blocks
-    data_list <- stats::setNames(
-      rep(list(data), length(blocks)),
-      block_names
-    )
-  }
-
-  # Validate each block
-  results <- lapply(block_names, function(name) {
-    if (verbose) {
-      cat(sprintf("\nValidating block '%s'...\n", name))
-    }
-
-    block_data <- if (name %in% names(data_list)) {
-      data_list[[name]]
-    } else {
-      data # fallback to default data
-    }
-
-    # Extract block and expand_advanced flag
-    block_item <- blocks[[name]]
-    if (is.list(block_item) && "block" %in% names(block_item)) {
-      # Block is wrapped with options
-      block_obj <- block_item$block
-      expand_adv <- isTRUE(block_item$expand_advanced)
-    } else {
-      # Block is standalone
-      block_obj <- block_item
-      expand_adv <- FALSE
-    }
-
-    result <- validate_block_screenshot(
-      block = block_obj,
-      data = block_data,
-      filename = paste0(name, ".png"),
-      output_dir = output_dir,
-      expand_advanced = expand_adv,
-      verbose = verbose
-    )
-
-    data.frame(
-      block_name = name,
-      success = result$success,
-      screenshot = ifelse(result$success, result$filename, NA),
-      error = ifelse(is.null(result$error), "", result$error),
-      stringsAsFactors = FALSE
-    )
-  })
-
-  # Combine results
-  results_df <- do.call(rbind, results)
-
-  if (verbose) {
-    cat("\n=== Validation Summary ===\n")
-    cat(sprintf("Total blocks: %d\n", nrow(results_df)))
-    cat(sprintf("Successful: %d\n", sum(results_df$success)))
-    cat(sprintf("Failed: %d\n", sum(!results_df$success)))
-
-    if (any(!results_df$success)) {
-      cat("\nFailed blocks:\n")
-      failed <- results_df[!results_df$success, ]
-      for (i in seq_len(nrow(failed))) {
-        cat(sprintf("  - %s: %s\n", failed$block_name[i], failed$error[i]))
-      }
-    }
-  }
-
-  return(results_df)
 }
