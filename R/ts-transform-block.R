@@ -70,21 +70,31 @@ new_ts_transform_block <- function(verb = "pcy", base = character(),
             if (input$verb_pick %in% ts_verb_keys()) r_verb(input$verb_pick)
           })
 
+          # Rendered ONCE. The grid's only reactive content is which tile
+          # carries `is-active`, and the tile moves that itself on click, so
+          # re-rendering sixteen tiles to shift one class is a round trip
+          # that buys nothing and blanks the grid mid-click.
           output$tiles <- shiny::renderUI({
             labels <- vapply(ts_verbs(), `[[`, character(1L), "label")
             ts_tile_grid(session$ns("verb_pick"), ts_verb_groups(), labels,
-                         r_verb())
+                         shiny::isolate(r_verb()))
           })
 
           # The argument row is rebuilt when the verb changes or the data
           # does, because both decide what the controls are allowed to offer.
+          # THE VALUES ARE SEEDS, NOT DEPENDENCIES. Each one is written by
+          # the observeEvent on the input it seeds, so reading them live
+          # means every keystroke rebuilds the row and destroys the control
+          # being typed in. What legitimately changes the shape of the row
+          # is the verb and the data.
           output$args <- shiny::renderUI({
-            ts_verb_fields(session$ns, r_verb(), facts(), list(
+            vals <- shiny::isolate(list(
               base = r_base(), start = r_start(), end = r_end(),
               by = r_by(), to = r_to(), aggregate = r_aggregate(),
               center = r_center(), scale = r_scale(),
               denominator = r_denominator()
             ))
+            ts_verb_fields(session$ns, r_verb(), facts(), vals)
           })
 
           # Each control writes its own reactiveVal. `ignoreInit` is wrong

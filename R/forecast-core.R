@@ -89,13 +89,13 @@ ts_forecast <- function(data, target = character(), engine = "ets", h = 12L,
 fc_engines <- function() {
   list(
     ets = list(label = "ETS", joint = FALSE, xreg = FALSE,
-               hint = "Exponential smoothing, state chosen by AICc"),
+               hint = "Exponential smoothing, state chosen by AICc."),
     arima = list(label = "ARIMA", joint = FALSE, xreg = TRUE,
-                 hint = "auto.arima, with optional regressors"),
+                 hint = "auto.arima, with optional regressors."),
     theta = list(label = "Theta", joint = FALSE, xreg = FALSE,
-                 hint = "Univariate and hard to beat"),
+                 hint = "Univariate and hard to beat."),
     var = list(label = "VAR", joint = TRUE, xreg = FALSE,
-               hint = "Joint: the targets are one system")
+               hint = "Joint: the targets are one system.")
   )
 }
 

@@ -117,8 +117,16 @@ ts_tile_grid <- function(input_id, groups, labels, current) {
               class = paste("blockr-ts-tile",
                             if (identical(k, current)) "is-active"),
               title = labels[[k]],
+              # The highlight moves here, not on the server: see the
+              # `isolate()` on the renderUI that draws this grid.
               onclick = sprintf(
-                "Shiny.setInputValue('%s', '%s', {priority: 'event'});",
+                paste0(
+                  "var g=this.closest('.blockr-ts-tiles');",
+                  "if(g){g.querySelectorAll('.blockr-ts-tile').forEach(",
+                  "function(t){t.classList.remove('is-active')});}",
+                  "this.classList.add('is-active');",
+                  "Shiny.setInputValue('%s', '%s', {priority: 'event'});"
+                ),
                 input_id, k
               ),
               htmltools::HTML(ts_icon(k)),

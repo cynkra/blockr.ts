@@ -250,7 +250,7 @@ fc_select_multi <- function(id, label, choices, selected, empty = "none") {
     class = "blockr-ts-field blockr-ts-field--multi",
     shiny::selectInput(
       id, label, choices = choices, selected = selected,
-      multiple = TRUE, selectize = FALSE, width = "100%", size = 4
+      multiple = TRUE, selectize = FALSE, width = "100%", size = 3
     ),
     htmltools::div(
       class = "blockr-ts-fc-empty",
@@ -276,8 +276,11 @@ fc_number <- function(id, label, value, min = NA) {
 #' @noRd
 fc_css <- function() {
   htmltools::tags$style(htmltools::HTML("
-    .blockr-ts-field--multi { flex: 1 1 180px; }
-    .blockr-ts-field--multi select { min-height: 92px; }
+    /* A list box does not stretch. Left to grow it takes a whole row
+       to show three items, and the row it takes is the one the engine and
+       the horizon were sharing. */
+    .blockr-ts-field--multi { flex: 0 1 230px; }
+    .blockr-ts-field--multi select { min-height: 74px; }
     .blockr-ts-field--num { flex: 0 1 110px; }
     .blockr-ts-fc-empty {
       font-size: 11px;

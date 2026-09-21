@@ -75,18 +75,24 @@ new_ts_combine_block <- function(method = "c", names = character(),
             }
           })
 
+          # Once, like the transform block's grid: the tile moves its own
+          # highlight.
           output$tiles <- shiny::renderUI({
             labels <- vapply(ts_methods(), `[[`, character(1L), "label")
             ts_tile_grid(
               session$ns("method_pick"),
               stats::setNames(list(base::names(ts_methods())), ""),
-              labels, r_method()
+              labels, shiny::isolate(r_method())
             )
           })
 
+          # Same rule as the argument row: the method and the number of
+          # connected inputs change the SHAPE of this panel, the names are
+          # seeds written by the observer below. Reading the names live
+          # rebuilds the text field you are typing in.
           output$slots <- shiny::renderUI({
             spec <- ts_methods()[[r_method()]]
-            nms <- slot_names()
+            nms <- shiny::isolate(slot_names())
             n <- length(refs())
             htmltools::tagList(
               ts_hint(spec$hint),
@@ -107,8 +113,8 @@ new_ts_combine_block <- function(method = "c", names = character(),
                 })
               ),
               if (spec$one) ts_fields(
-                ts_text(session$ns("result"), "Name the result", r_result(),
-                        placeholder = "value")
+                ts_text(session$ns("result"), "Name the result",
+                        shiny::isolate(r_result()), placeholder = "value")
               ),
               if (spec$one) ts_hint(paste0(
                 "Without a name the result is called “value”: ",

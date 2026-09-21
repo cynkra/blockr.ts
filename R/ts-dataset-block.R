@@ -40,14 +40,29 @@ new_ts_dataset_block <- function(dataset = "AirPassengers",
           })
           shiny::observeEvent(input$dataset, r_dataset(input$dataset))
 
+          # Rendered once. Picking a dataset writes r_dataset(), and
+          # reading it here would rebuild the package select too, so the
+          # control you just used disappears and comes back.
           output$controls <- shiny::renderUI({
-            ts_fields(
-              ts_select(session$ns("package"), "Package",
-                        ts_packages_with_series(), selected = r_package()),
-              ts_select(session$ns("dataset"), "Dataset", choices(),
-                        selected = ts_one_of(r_dataset(), choices()))
+            shiny::isolate(
+              ts_fields(
+                ts_select(session$ns("package"), "Package",
+                          ts_packages_with_series(), selected = r_package()),
+                ts_select(session$ns("dataset"), "Dataset", choices(),
+                          selected = ts_one_of(r_dataset(), choices()))
+              )
             )
           })
+
+          # What genuinely changes is the dataset list when the package
+          # does, and updating a select in place is not a re-render.
+          # `ts_select()` wraps a plain `selectInput()`, so this reaches it.
+          shiny::observeEvent(choices(), {
+            shiny::updateSelectInput(
+              session, "dataset", choices = choices(),
+              selected = ts_one_of(r_dataset(), choices())
+            )
+          }, ignoreInit = TRUE)
 
           list(
             expr = shiny::reactive(
