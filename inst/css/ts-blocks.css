@@ -173,83 +173,139 @@
 }
 .blockr-ts-slot .blockr-ts-field { flex: 1 1 auto; }
 
-/* ---- the series picker ----------------------------------------------- */
+/* ---- the series picker ---------------------------------------------
+ * A delta on blockr.ui's table preview, not a table of our own: the base
+ * `.blockr-table` rules, the sticky head, the sortable header and the
+ * search input all come from there, so the picker reads as the table block
+ * rather than as something built beside it at slightly the wrong size.
+ * Everything below is the difference a 168-row picker needs.
+ */
 .blockr-ts-pick__bar {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 8px;
+  gap: 8px;
+  padding: 4px 0 8px;
+  border-bottom: 0;
 }
-.blockr-ts-pick__bar .blockr-ts-field { flex: 1 1 200px; max-width: 280px; }
 .blockr-ts-pick__count {
-  margin-left: auto;
-  font-size: var(--blockr-font-size-xs, 0.75rem);
-  color: var(--blockr-grey-400, #9ca3af);
+  font-size: var(--blockr-font-size-xs, 0.75rem) !important;
+  font-weight: 400 !important;
+  color: var(--blockr-grey-400, #9ca3af) !important;
   white-space: nowrap;
 }
+/* The search input, copied from blockr.viz's table block so the two are the
+   same control. It lives in that package's delta CSS, not in blockr.ui's
+   base sheet, so it does not arrive with table_preview_dep(). */
+.blockr-ts-pick input.blockr-search {
+  appearance: none;
+  -webkit-appearance: none;
+  box-sizing: border-box;
+  height: var(--blockr-control-h-sm, 30px);
+  border: 1px solid var(--blockr-color-border, #e5e7eb);
+  border-radius: 4px;
+  padding: 4px 8px 4px 26px;
+  font: inherit;
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  color: var(--blockr-color-text-primary, #111827);
+  background-color: var(--blockr-color-bg-input, #f9fafb);
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='13' height='13' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'><circle cx='11' cy='11' r='7'/><path d='m20 20-3-3'/></svg>");
+  background-repeat: no-repeat;
+  background-position: 8px center;
+  width: 180px;
+  transition: border-color 0.12s, box-shadow 0.12s;
+}
+.blockr-ts-pick input.blockr-search::placeholder {
+  color: var(--blockr-color-text-subtle, #9ca3af);
+}
+.blockr-ts-pick input.blockr-search:focus {
+  outline: none;
+  border-color: var(--blockr-color-primary, #2563eb);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+  background-color: #ffffff;
+}
+
 .blockr-ts-pick__link {
   border: 0;
   background: none;
-  padding: 0;
+  padding: 0 2px;
   cursor: pointer;
   font-size: var(--blockr-font-size-xs, 0.75rem);
   color: var(--blockr-color-primary, #2563eb);
 }
-.blockr-ts-pick__list {
+
+.blockr-ts-pick__wrap {
+  /* Shorter than the preview's 400px: this list sits above the chart it
+     feeds, and both have to be on the screen at once. */
   max-height: 330px;
-  overflow-y: auto;
-  background: #fff;
   border: 1px solid var(--blockr-color-border, #e5e7eb);
   border-radius: var(--blockr-radius-lg, 8px);
 }
-.blockr-ts-pick__head,
-.blockr-ts-pick__row {
-  display: grid;
-  grid-template-columns: 20px 100px minmax(0, 1fr) 48px 118px 82px;
-  align-items: center;
-  gap: 10px;
-  padding: 4px 10px;
+
+/* The preview's 10px/16px cell padding is right for five rows and wrong for
+   168: at that height the list stops being scannable. */
+.blockr-ts-pick__table th,
+.blockr-ts-pick__table td {
+  padding: 3px 10px;
+  max-width: none;
 }
-.blockr-ts-pick__head {
-  position: sticky;
-  top: 0;
-  z-index: 1;
-  background: #fff;
-  border-bottom: 1px solid var(--blockr-color-border, #e5e7eb);
+.blockr-ts-pick__table th {
   font-size: var(--blockr-font-size-xs, 0.75rem);
+  font-weight: var(--blockr-font-weight-medium, 500);
+  color: var(--blockr-grey-400, #9ca3af);
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--blockr-grey-400, #9ca3af);
+  padding-top: 6px;
+  padding-bottom: 6px;
 }
-.blockr-ts-pick__row {
-  border-bottom: 1px solid rgba(128, 128, 135, 0.1);
-  cursor: pointer;
-  font-size: var(--blockr-font-size-sm, 0.8125rem);
-  margin: 0;
-  font-weight: 400;
-}
-.blockr-ts-pick__row:last-child { border-bottom: 0; }
-.blockr-ts-pick__row:hover { background: var(--blockr-grey-50, #f9fafb); }
-.blockr-ts-pick__row.is-on { background: #eff6ff; }
-.blockr-ts-pick__row.is-hidden { display: none; }
-.blockr-ts-pick__row input[type="checkbox"] {
-  margin: 0;
-  accent-color: var(--blockr-color-primary, #2563eb);
-}
-.blockr-ts-pick__row svg { display: block; color: var(--blockr-grey-400, #9ca3af); }
-.blockr-ts-pick__row.is-on svg { color: var(--blockr-color-primary, #2563eb); }
+.blockr-ts-pick__table td { font-size: var(--blockr-font-size-sm, 0.8125rem); }
+
+.blockr-ts-pick__tick { width: 28px; }
+.blockr-ts-pick__shape { width: 106px; }
 .blockr-ts-pick__name {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--blockr-grey-900, #111827);
-}
-.blockr-ts-pick__num {
-  text-align: right;
-  color: var(--blockr-grey-500, #6b7280);
-  font-variant-numeric: tabular-nums;
 }
 .blockr-ts-pick__span {
   color: var(--blockr-grey-400, #9ca3af);
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
+.blockr-ts-pick__table .blockr-td-numeric {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.blockr-ts-pick__row { cursor: pointer; }
+.blockr-ts-pick__row.is-on { background: #eff6ff; }
+.blockr-ts-pick__row.is-on:hover { background: #e3edfd; }
+.blockr-ts-pick__row.is-hidden { display: none; }
+
+/* The box shows the state; the ROW takes the click. Without this a click
+   that lands on the box is a second, competing toggle. */
+.blockr-ts-pick__row input[type="checkbox"] {
+  margin: 0;
+  pointer-events: none;
+  accent-color: var(--blockr-color-primary, #2563eb);
+}
+.blockr-ts-pick__row svg {
+  display: block;
+  color: var(--blockr-grey-400, #9ca3af);
+}
+.blockr-ts-pick__row.is-on svg { color: var(--blockr-color-primary, #2563eb); }
+
+/* Without blockr.ui the base table CSS is not on the page, so the picker
+   keeps its shape rather than collapsing to browser defaults. */
+.blockr-ts-pick__table { border-collapse: collapse; width: 100%; }
+.blockr-ts-pick__table thead {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #fff;
+  box-shadow: inset 0 -1px 0 var(--blockr-color-border, #e5e7eb);
+}
+.blockr-ts-pick__table th { text-align: left; }
+.blockr-ts-pick__table tbody tr {
+  border-bottom: 1px solid var(--blockr-grey-100, #f3f4f6);
+}
+.blockr-ts-pick__table tbody tr:last-child { border-bottom: 0; }

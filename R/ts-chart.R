@@ -255,7 +255,7 @@ ts_chart_dep <- function() {
 #'
 #' @noRd
 ts_asset_version <- function() {
-  paste0(utils::packageVersion("blockr.ts"), ".10")
+  paste0(utils::packageVersion("blockr.ts"), ".12")
 }
 
 #' Resolve one of this package's asset directories

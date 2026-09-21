@@ -151,6 +151,16 @@ ts_sparkline <- function(v, w = 96, h = 20, n = 70) {
 }
 
 #' The picker list
+#'
+#' A real `<table class="blockr-table">` in blockr.ui's table preview, not a
+#' grid of our own: the picker reads as the table block because it IS the
+#' table block's markup, and the sortable header, the sticky head and the
+#' search input come with it rather than being reinvented at slightly the
+#' wrong size.
+#'
+#' Sorting is a click on a column header, which is where a reader of a table
+#' looks for it, and it never leaves the browser.
+#'
 #' @noRd
 ts_pick_ui <- function(ns, rows, picked) {
   root <- ns("pick")
@@ -165,6 +175,17 @@ ts_pick_ui <- function(ns, rows, picked) {
     if (is.na(x)) "" else formatC(x, format = "f", digits = 1, big.mark = ",")
   }
 
+  th <- function(key, label, numeric = FALSE) {
+    htmltools::tags$th(
+      class = paste("blockr-sortable",
+                    if (numeric) "blockr-td-numeric"),
+      `data-sort` = key,
+      scope = "col",
+      label,
+      htmltools::tags$span(class = "blockr-sort-icon")
+    )
+  }
+
   htmltools::tagList(
     ts_pick_dep(),
     htmltools::div(
@@ -172,60 +193,75 @@ ts_pick_ui <- function(ns, rows, picked) {
       class = "blockr-ts-pick",
       `data-input` = ns("picked"),
       htmltools::div(
-        class = "blockr-ts-pick__bar",
+        class = "blockr-html-table-header blockr-ts-pick__bar",
+        htmltools::div(class = "blockr-html-table-title blockr-ts-pick__count"),
         htmltools::div(
-          class = "blockr-ts-field",
+          class = "blockr-html-table-toolbar",
           htmltools::tags$input(
-            type = "search", class = "form-control blockr-ts-pick__q",
-            placeholder = paste0("Filter ", length(rows), " series")
+            type = "search", class = "blockr-search",
+            placeholder = "Search\u2026",
+            `aria-label` = "Search series"
+          ),
+          htmltools::tags$button(
+            type = "button", class = "blockr-ts-pick__link", "clear"
           )
-        ),
-        htmltools::div(
-          class = "blockr-ts-field",
-          htmltools::tags$select(
-            class = "form-control blockr-ts-pick__sort",
-            htmltools::tags$option(value = "name", "Sort by name"),
-            htmltools::tags$option(value = "last", "Sort by last value"),
-            htmltools::tags$option(value = "obs", "Sort by length")
-          )
-        ),
-        htmltools::span(class = "blockr-ts-pick__count"),
-        htmltools::tags$button(type = "button",
-                               class = "blockr-ts-pick__link", "clear")
+        )
       ),
       htmltools::div(
-        class = "blockr-ts-pick__list",
-        htmltools::div(
-          class = "blockr-ts-pick__head",
-          htmltools::span(), htmltools::span("shape"),
-          htmltools::span("series"),
-          htmltools::span(class = "blockr-ts-pick__num", "obs"),
-          htmltools::span("span"),
-          htmltools::span(class = "blockr-ts-pick__num", "last")
-        ),
-        lapply(rows, function(r) {
-          on <- r$id %in% picked
-          htmltools::tags$label(
-            class = paste("blockr-ts-pick__row", if (on) "is-on"),
-            `data-id` = r$id,
-            `data-q` = tolower(r$id),
-            `data-last` = if (is.na(r$last)) 0 else r$last,
-            `data-obs` = r$obs,
-            htmltools::tags$input(type = "checkbox", checked = if (on) NA),
-            htmltools::HTML(paste0(
-              '<svg width="96" height="20" viewBox="0 0 96 20" fill="none" ',
-              'stroke="currentColor" stroke-width="1.1" ',
-              'stroke-linejoin="round" aria-hidden="true"><path d="',
-              r$spark, '"/></svg>'
-            )),
-            # The id comes from the user's data, so it goes in as text.
-            htmltools::span(class = "blockr-ts-pick__name", r$id),
-            htmltools::span(class = "blockr-ts-pick__num", r$obs),
-            htmltools::span(class = "blockr-ts-pick__span",
-                            paste(r$start, "–", r$end)),
-            htmltools::span(class = "blockr-ts-pick__num", fmt(r$last))
+        class = "blockr-table-wrapper blockr-ts-pick__wrap",
+        htmltools::tags$table(
+          class = "blockr-table blockr-ts-pick__table",
+          htmltools::tags$thead(
+            htmltools::tags$tr(
+              htmltools::tags$th(class = "blockr-ts-pick__tick", scope = "col"),
+              htmltools::tags$th(class = "blockr-ts-pick__shape", scope = "col",
+                                 "shape"),
+              th("name", "series"),
+              th("obs", "obs", numeric = TRUE),
+              th("start", "span"),
+              th("last", "last", numeric = TRUE)
+            )
+          ),
+          htmltools::tags$tbody(
+            lapply(rows, function(r) {
+              on <- r$id %in% picked
+              htmltools::tags$tr(
+                class = paste("blockr-ts-pick__row", if (on) "is-on"),
+                `data-id` = r$id,
+                `data-q` = tolower(r$id),
+                `data-last` = if (is.na(r$last)) 0 else r$last,
+                `data-obs` = r$obs,
+                `data-start` = r$start,
+                htmltools::tags$td(
+                  class = "blockr-ts-pick__tick",
+                  # NOT wrapped in a <label>. A label around a checkbox
+                  # forwards activation to it, so one gesture arrives as two
+                  # events and the box visibly toggles twice. The row owns
+                  # the click; the box is a display of the state.
+                  htmltools::tags$input(
+                    type = "checkbox", tabindex = "-1",
+                    checked = if (on) NA, `aria-hidden` = "true"
+                  )
+                ),
+                htmltools::tags$td(
+                  class = "blockr-ts-pick__shape",
+                  htmltools::HTML(paste0(
+                    '<svg width="96" height="20" viewBox="0 0 96 20" ',
+                    'fill="none" stroke="currentColor" stroke-width="1.1" ',
+                    'stroke-linejoin="round" aria-hidden="true"><path d="',
+                    r$spark, '"/></svg>'
+                  ))
+                ),
+                # The id comes from the user's data, so it goes in as text.
+                htmltools::tags$td(class = "blockr-ts-pick__name", r$id),
+                htmltools::tags$td(class = "blockr-td-numeric", r$obs),
+                htmltools::tags$td(class = "blockr-ts-pick__span",
+                                   paste(r$start, "\u2013", r$end)),
+                htmltools::tags$td(class = "blockr-td-numeric", fmt(r$last))
+              )
+            })
           )
-        })
+        )
       ),
       ts_hint("Nothing ticked passes every series through.")
     ),

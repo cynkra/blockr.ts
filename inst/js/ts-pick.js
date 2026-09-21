@@ -20,13 +20,13 @@
     root._tsPick = true;
 
     var inputId = root.getAttribute('data-input');
-    var list = root.querySelector('.blockr-ts-pick__list');
+    var body = root.querySelector('tbody');
     var rows = Array.prototype.slice.call(
       root.querySelectorAll('.blockr-ts-pick__row'));
     var count = root.querySelector('.blockr-ts-pick__count');
-    var q = root.querySelector('.blockr-ts-pick__q');
-    var sort = root.querySelector('.blockr-ts-pick__sort');
+    var q = root.querySelector('.blockr-search');
     var clear = root.querySelector('.blockr-ts-pick__link');
+    var sort = {key: null, dir: 1};
 
     function picked() {
       return rows.filter(function (r) {
@@ -49,17 +49,16 @@
         (shown < rows.length ? ', ' + shown + ' shown' : '');
     }
 
-    // LISTEN FOR `change`, NOT `click`. The row is a <label> around the
-    // checkbox, so a click on the row activates the box and the box then
-    // fires its own click that bubbles back here: two events for one
-    // gesture, and a handler that flips the box itself flips it twice.
-    // `change` fires once, after the browser has already done the toggle.
-    root.addEventListener('change', function (ev) {
-      var box = ev.target;
-      if (!box.matches || !box.matches('input[type=checkbox]')) return;
-      var row = box.closest('.blockr-ts-pick__row');
-      if (!row) return;
-      row.classList.toggle('is-on', box.checked);
+    // ONE EVENT PER GESTURE. The checkbox is `pointer-events: none` and the
+    // row carries the click, so there is no label forwarding a second
+    // activation to the box and no visible double toggle.
+    root.addEventListener('click', function (ev) {
+      var row = ev.target.closest('.blockr-ts-pick__row');
+      if (!row || !root.contains(row)) return;
+      var on = !row.classList.contains('is-on');
+      row.classList.toggle('is-on', on);
+      var box = row.querySelector('input[type=checkbox]');
+      if (box) box.checked = on;
       paintCount();
       send();
     });
@@ -73,27 +72,70 @@
       paintCount();
     });
 
-    sort.addEventListener('change', function () {
-      var by = sort.value;
-      var out = rows.slice();
-      if (by === 'last') {
-        out.sort(function (a, b) { return b.dataset.last - a.dataset.last; });
-      } else if (by === 'obs') {
-        out.sort(function (a, b) { return b.dataset.obs - a.dataset.obs; });
-      }
-      out.forEach(function (r) { list.appendChild(r); });
+    /* ---- sorting, on the column header ---------------------------------
+       Where a reader of a table looks for it. First click sorts, second
+       reverses, and the arrow says which. Text sorts up, numbers sort down
+       first, because "which is the biggest" is the question you ask of a
+       number column and "where is X" of a name column. */
+    var NUMERIC = {obs: true, last: true};
+
+    function applySort() {
+      if (!sort.key) return;
+      var key = sort.key;
+      var num = NUMERIC[key];
+      var out = rows.slice().sort(function (a, b) {
+        var x = a.dataset[key];
+        var y = b.dataset[key];
+        if (num) return (x - y) * sort.dir;
+        return x.localeCompare(y) * sort.dir;
+      });
+      // One reflow, not 168: the rows are moved inside a fragment first.
+      var frag = document.createDocumentFragment();
+      out.forEach(function (r) { frag.appendChild(r); });
+      body.appendChild(frag);
+    }
+
+    function paintIcons() {
+      root.querySelectorAll('.blockr-sortable').forEach(function (th) {
+        var icon = th.querySelector('.blockr-sort-icon');
+        var on = th.dataset.sort === sort.key;
+        if (icon) {
+          icon.className = 'blockr-sort-icon' + (on
+            ? (sort.dir > 0 ? ' blockr-sort-icon-asc' : ' blockr-sort-icon-desc')
+            : '');
+        }
+        th.setAttribute('aria-sort', on
+          ? (sort.dir > 0 ? 'ascending' : 'descending') : 'none');
+      });
+    }
+
+    root.querySelectorAll('.blockr-sortable').forEach(function (th) {
+      th.addEventListener('click', function () {
+        var key = th.dataset.sort;
+        if (sort.key === key) {
+          sort.dir = -sort.dir;
+        } else {
+          sort.key = key;
+          sort.dir = NUMERIC[key] ? -1 : 1;
+        }
+        applySort();
+        paintIcons();
+      });
     });
 
-    clear.addEventListener('click', function () {
+    clear.addEventListener('click', function (ev) {
+      ev.stopPropagation();
       rows.forEach(function (r) {
         r.classList.remove('is-on');
-        r.querySelector('input[type=checkbox]').checked = false;
+        var box = r.querySelector('input[type=checkbox]');
+        if (box) box.checked = false;
       });
       paintCount();
       send();
     });
 
     paintCount();
+    paintIcons();
   }
 
   window.BlockrTsPick = { mount: mount };

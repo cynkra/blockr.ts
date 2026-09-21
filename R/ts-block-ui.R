@@ -16,6 +16,12 @@ NULL
 ts_blocks_dep <- function() {
   htmltools::tagList(
     blockr.dplyr::blockr_blocks_css_dep(),
+    # The picker is a delta on the canonical table preview rather than a
+    # table of its own. blockr.ui is a Suggests, so this is conditional and
+    # `ts-blocks.css` carries enough of a floor to stand without it.
+    if (requireNamespace("blockr.ui", quietly = TRUE)) {
+      getExportedValue("blockr.ui", "table_preview_dep")()
+    },
     htmltools::htmlDependency(
       name = "blockr-ts-blocks",
       version = ts_asset_version(),
