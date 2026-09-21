@@ -56,8 +56,18 @@
     };
   }
 
-  function opts(payload, width, height, pal) {
-    var font = '11px Inter, system-ui, sans-serif';
+  // THE AXES ARE DRAWN TO CANVAS, WHICH DOES NOT WARN ABOUT A MISSING FONT.
+  // Asking for a family the page has not loaded silently falls through to
+  // the browser default, which is how this chart spent a day in Inter-that-
+  // was-actually-system-ui while the board around it was Open Sans. Read the
+  // family the element has actually inherited instead of naming one, so the
+  // chart follows the theme rather than guessing at it.
+  function chartFont(el, px) {
+    var fam = getComputedStyle(el).fontFamily;
+    return px + 'px ' + (fam && fam.length ? fam : 'sans-serif');
+  }
+
+  function opts(payload, width, height, pal, font) {
     return {
       width: width,
       height: height,
@@ -166,7 +176,8 @@
     var height = Math.max(120, host.clientHeight - 26);
 
     var render;
-    var o = opts(payload, plot.clientWidth || 600, height, pal);
+    var o = opts(payload, plot.clientWidth || 600, height, pal,
+                 chartFont(host, 11));
     o.plugins = [{
       hooks: {setCursor: function (u) { if (render) render(u.cursor.idx); }}
     }];

@@ -160,7 +160,18 @@ tabular_output.ts_display <- function(x, result, block, session) {
   }
 
   if (identical(ts_view(session), "table")) {
-    return(delegate_output(ts_fallback(x), result, block, session))
+    # WHATEVER THE CHART ACCEPTED, THE TABLE HAS TO ACCEPT TOO, or the switch
+    # is a button that breaks the panel. tsbox reads `ts`, `xts`, `zoo` and
+    # the rest, so `ts_frame()` resolves a plain `ts` object happily and the
+    # table preview then dies on it: `table_page()` on an `AirPassengers`
+    # returns "missing value where TRUE/FALSE needed". Convert at this one
+    # boundary rather than teaching every fallback display about time series.
+    flat <- if (is.data.frame(result)) {
+      result
+    } else {
+      tryCatch(suppressMessages(tsbox::ts_tbl(result)), error = function(e) result)
+    }
+    return(delegate_output(ts_fallback(x), flat, block, session))
   }
 
   shiny::renderUI(ts_chart_html(d, session$ns("result_view_toggle")))

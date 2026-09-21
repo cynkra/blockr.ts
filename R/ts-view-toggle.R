@@ -60,27 +60,32 @@ ts_view_hide <- function(session) {
   )
 }
 
-# Two 14px glyphs, inline so the package needs no icon set.
+# Two glyphs, inline so the package needs no icon set. Deliberately plain:
+# the table was a framed grid with two dividers and the frame was doing no
+# work at 15px. Three rows say "table" and a polyline says "chart".
 ICON_CHART <- paste0(
-  '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" ',
+  '<svg viewBox="0 0 16 16" width="15" height="15" fill="none" ',
   'stroke="currentColor" stroke-width="1.5" stroke-linecap="round" ',
-  'stroke-linejoin="round"><path d="M1.5 12.5 5.5 7 8.5 9.5 14.5 3"/></svg>'
+  'stroke-linejoin="round"><path d="M2 11.5 6 6.5l3 3 5-6"/></svg>'
 )
 
 ICON_TABLE <- paste0(
-  '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" ',
-  'stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="2.5" ',
-  'width="13" height="11" rx="1"/><path d="M1.5 6.5h13M6 6.5v7"/></svg>'
+  '<svg viewBox="0 0 16 16" width="15" height="15" fill="none" ',
+  'stroke="currentColor" stroke-width="1.5" stroke-linecap="round">',
+  '<path d="M2 4h12M2 8h12M2 12h12"/></svg>'
 )
 
 #' @noRd
 ts_view_toggle_css <- function() {
   htmltools::tags$style(htmltools::HTML("
-    /* A SEGMENTED CONTROL, NOT TWO LOOSE GLYPHS. The first version was two
-       14px icons in #9a9aa2 with no container, right-aligned above the chart,
-       and it was invisible in practice: nothing said it was a control and
-       nothing said which side was on. A border, a track and a raised active
-       segment are what make a two-state switch read as one. */
+    /* A SEGMENTED CONTROL: a bordered track and a raised active segment.
+       The version before this had two bare 15px glyphs and no container,
+       and was invisible in practice; a border and a raised segment are what
+       make a two-state switch read as one and say which side is on.
+
+       The glyphs carry the rest of the weight, so they are plain: the table
+       was a framed grid with two dividers and the frame did no work at this
+       size. Three rows say table. */
     .blockr-ts-view {
       display: none;
       justify-content: flex-end;
@@ -92,9 +97,9 @@ ts_view_toggle_css <- function() {
       display: inline-flex;
       gap: 2px;
       padding: 2px;
-      border: 1px solid rgba(128,128,135,.28);
+      border: 1px solid rgba(128, 128, 135, .28);
       border-radius: 7px;
-      background: rgba(128,128,135,.08);
+      background: rgba(128, 128, 135, .08);
     }
 
     .blockr-ts-view__btn {
@@ -116,7 +121,7 @@ ts_view_toggle_css <- function() {
     .blockr-ts-view__btn.is-active {
       color: #3c3c43;
       background: #fff;
-      box-shadow: 0 1px 2px rgba(0,0,0,.10);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, .10);
     }
   "))
 }
