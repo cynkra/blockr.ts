@@ -46,3 +46,27 @@ test_that("the unnamed tile group renders its tiles", {
   # class, so count the buttons instead.
   expect_length(gregexpr("<button", html, fixed = TRUE)[[1L]], 2L)
 })
+
+test_that("the constructor's selection survives startup", {
+  # `input$picked` is NULL when the block is created. An observer that does
+  # not ignore its init fires on that NULL and overwrites `series` with
+  # nothing before a single click, and the block then passes every series
+  # through while the list shows the right rows ticked.
+  blk <- new_ts_pick_block(series = c("a", "b"))
+
+  d <- suppressMessages(tsbox::ts_tbl(tsbox::ts_c(
+    a = datasets::mdeaths, b = datasets::fdeaths, c = datasets::ldeaths
+  )))
+
+  shiny::testServer(
+    blk$expr_server,
+    args = list(data = shiny::reactive(d)),
+    {
+      session$flushReact()
+      expect_identical(session$getReturned()$state$series(), c("a", "b"))
+      e <- session$getReturned()$expr()
+      expect_identical(e[[1L]], quote(tsbox::ts_pick))
+      expect_identical(as.character(e[[3L]]), "a")
+    }
+  )
+})

@@ -56,10 +56,21 @@ new_ts_pick_block <- function(series = character(), ...) {
             ts_pick_ui(session$ns, rows(), shiny::isolate(r_series()))
           })
 
+          # `ignoreNULL = FALSE` so that UNTICKING THE LAST ROW reaches R:
+          # the browser sends an empty array and the default observer would
+          # drop it, leaving the board filtered to a selection the screen no
+          # longer shows.
+          #
+          # `ignoreInit = TRUE` is the other half of that, and without it the
+          # block silently ignores its own `series` argument: at startup
+          # `input$picked` is NULL, the observer fires on it, and the restored
+          # selection is overwritten with nothing before a single click. The
+          # symptom is a list with the right rows ticked and a block that
+          # passes every series through.
           shiny::observeEvent(input$picked, {
             picked <- as.character(unlist(input$picked))
             r_series(picked[nzchar(picked)])
-          }, ignoreNULL = FALSE)
+          }, ignoreNULL = FALSE, ignoreInit = TRUE)
 
           list(
             expr = shiny::reactive({
