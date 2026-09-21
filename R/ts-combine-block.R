@@ -95,11 +95,6 @@ new_ts_combine_block <- function(method = "c", names = character(),
             nms <- shiny::isolate(slot_names())
             n <- length(refs())
             htmltools::tagList(
-              ts_hint(spec$hint),
-              if (isTRUE(spec$binary) && n != 2L) ts_hint(paste0(
-                "This one takes exactly two inputs; ", n,
-                if (n == 1L) " is connected." else " are connected."
-              )),
               if (isTRUE(spec$named)) htmltools::div(
                 class = "blockr-ts-slots",
                 lapply(seq_len(n), function(i) {
@@ -115,12 +110,7 @@ new_ts_combine_block <- function(method = "c", names = character(),
               if (spec$one) ts_fields(
                 ts_text(session$ns("result"), "Name the result",
                         shiny::isolate(r_result()), placeholder = "value")
-              ),
-              if (spec$one) ts_hint(paste0(
-                "Without a name the result is called “value”: ",
-                "tsbox has no call that names a single series, so this is ",
-                "ts_name(), a helper of ours."
-              ))
+              )
             )
           })
 
@@ -178,20 +168,15 @@ new_ts_combine_block <- function(method = "c", names = character(),
 ts_methods <- function() {
   list(
     c = list(label = "Side by side", fn = "tsbox::ts_c", one = FALSE,
-             named = TRUE,
-             hint = "N series in, N series out, one id each."),
-    bind = list(label = "Append", fn = "tsbox::ts_bind", one = TRUE,
-                hint = "One series out. The later input wins where they overlap."),
-    chain = list(label = "Chain-link", fn = "tsbox::ts_chain", one = TRUE,
-                 hint = "One series out, re-based onto the first at the overlap."),
-    divide = list(label = "Ratio", op = "%ts/%", one = TRUE, binary = TRUE,
-                  hint = "Aligned on time and id first, so the spans and the frequencies need not match."),
+             named = TRUE),
+    bind = list(label = "Append", fn = "tsbox::ts_bind", one = TRUE),
+    chain = list(label = "Chain-link", fn = "tsbox::ts_chain", one = TRUE),
+    divide = list(label = "Ratio", op = "%ts/%", one = TRUE, binary = TRUE),
     subtract = list(label = "Difference", op = "%ts-%", one = TRUE,
-                    binary = TRUE, hint = "Aligned the same way."),
+                    binary = TRUE),
     multiply = list(label = "Product", op = "%ts*%", one = TRUE,
-                    binary = TRUE, hint = "Aligned the same way."),
-    add = list(label = "Sum", op = "%ts+%", one = TRUE, binary = TRUE,
-               hint = "Aligned the same way.")
+                    binary = TRUE),
+    add = list(label = "Sum", op = "%ts+%", one = TRUE, binary = TRUE)
   )
 }
 

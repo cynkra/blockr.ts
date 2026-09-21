@@ -165,10 +165,9 @@ ts_sparkline <- function(v, w = 96, h = 20, n = 70) {
 ts_pick_ui <- function(ns, rows, picked) {
   root <- ns("pick")
   if (!length(rows)) {
-    return(ts_hint(paste0(
-      "Nothing to pick: this input holds one unnamed series. A picker needs ",
-      "an id column."
-    )))
+    # An empty state, not an explanation: without an id column there is
+    # nothing on the screen at all, which needs saying.
+    return(ts_hint("This input holds one unnamed series."))
   }
 
   fmt <- function(x) {
@@ -263,7 +262,6 @@ ts_pick_ui <- function(ns, rows, picked) {
           )
         )
       ),
-      ts_hint("Nothing ticked passes every series through.")
     ),
     htmltools::tags$script(htmltools::HTML(sprintf(
       "(function(){var f=function(){if(window.BlockrTsPick){window.BlockrTsPick.mount('%s');}else{setTimeout(f,50);}};f();})();",

@@ -180,18 +180,32 @@
  * rather than as something built beside it at slightly the wrong size.
  * Everything below is the difference a 168-row picker needs.
  */
+/* The blockr.viz table block's header row, values and all: the count sits
+   left and the toolbar right, pinned by space-between rather than pushed by
+   the count's width. It was `gap` before, so every change to "6 of 168
+   selected, 24 shown" slid the search box sideways under the pointer. */
 .blockr-ts-pick__bar {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 4px 0 8px;
-  border-bottom: 0;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 4px;
+  border-bottom: 1px solid var(--blockr-color-border, #e5e7eb);
 }
 .blockr-ts-pick__count {
   font-size: var(--blockr-font-size-xs, 0.75rem) !important;
   font-weight: 400 !important;
   color: var(--blockr-grey-400, #9ca3af) !important;
   white-space: nowrap;
+  flex: 0 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.blockr-ts-pick .blockr-html-table-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
 }
 /* The search input, copied from blockr.viz's table block so the two are the
    same control. It lives in that package's delta CSS, not in blockr.ui's
@@ -235,10 +249,12 @@
 
 .blockr-ts-pick__wrap {
   /* Shorter than the preview's 400px: this list sits above the chart it
-     feeds, and both have to be on the screen at once. */
+     feeds, and both have to be on the screen at once. No top border or
+     radius -- the bar above already draws the rule the table hangs from. */
   max-height: 330px;
   border: 1px solid var(--blockr-color-border, #e5e7eb);
-  border-radius: var(--blockr-radius-lg, 8px);
+  border-top: 0;
+  border-radius: 0 0 var(--blockr-radius-lg, 8px) var(--blockr-radius-lg, 8px);
 }
 
 /* The preview's 10px/16px cell padding is right for five rows and wrong for

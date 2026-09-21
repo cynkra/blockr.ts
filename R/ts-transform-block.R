@@ -163,7 +163,7 @@ ts_verb_fields <- function(ns, verb, facts, state) {
     return(NULL)
   }
   if (!isTRUE(facts$ok)) {
-    return(ts_hint("Waiting for a series."))
+    return(NULL)
   }
 
   periods <- ts_period_labels(facts$periods, facts$freq)
@@ -173,35 +173,23 @@ ts_verb_fields <- function(ns, verb, facts, state) {
     index = list(
       ts_select(ns("base"), "Base period", periods,
                 selected = ts_one_of(state$base, periods)),
-      hint = paste0(
-        "The list is bounded by the series, ", format(facts$start), " to ",
-        format(facts$end), "."
-      )
     ),
     span = list(
       ts_select(ns("start"), "Start", c("First" = "", periods),
                 selected = ts_one_of(state$start, periods, "")),
       ts_select(ns("end"), "End", c("Last" = "", periods),
-                selected = ts_one_of(state$end, periods, "")),
-      hint = "Both ends are bounded by the series."
+                selected = ts_one_of(state$end, periods, ""))
     ),
     lag = list(
       ts_select(ns("by"), "Shift by", ts_lag_choices(facts$freq),
-                selected = as.character(state$by)),
-      hint = if (!is.na(facts$freq)) paste0(
-        "One year is ", facts$freq, " periods here, because the series is ",
-        facts$unit, "."
-      )
+                selected = as.character(state$by))
     ),
     frequency = list(
       ts_select(ns("to"), "To", ts_coarser(facts$freq),
                 selected = ts_one_of(state$to, ts_coarser(facts$freq))),
       ts_select(ns("aggregate"), "Aggregate by",
                 c(Mean = "mean", Sum = "sum", First = "first", Last = "last"),
-                selected = state$aggregate),
-      hint = paste0(
-        "Only frequencies coarser than ", facts$unit, " are offered."
-      )
+                selected = state$aggregate)
     ),
     scale = list(
       ts_check(ns("center"), "Subtract the mean", state$center),
@@ -210,18 +198,12 @@ ts_verb_fields <- function(ns, verb, facts, state) {
     compound = list(
       ts_select(ns("denominator"), "Rates are in",
                 c("Percent (100)" = "100", "Fractions (1)" = "1"),
-                selected = as.character(state$denominator)),
-      hint = "The inverse of a change: rates back onto a level."
+                selected = as.character(state$denominator))
     ),
     list()
   )
 
-  hint <- fields$hint
-  fields$hint <- NULL
-  htmltools::tagList(
-    do.call(ts_fields, unname(fields)),
-    if (!is.null(hint)) ts_hint(hint)
-  )
+  do.call(ts_fields, unname(fields))
 }
 
 #' Lag choices that mean something at this frequency
