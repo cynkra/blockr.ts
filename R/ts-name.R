@@ -2,8 +2,8 @@
 #'
 #' tsbox has no call that names one series. `ts_c()` builds the `id` column by
 #' deparsing its arguments, so it needs two of them to have anything to build
-#' from: `ts_c(\`A\` = x)` on a single series drops the name and hands back
-#' `time` and `value`. Anything that reduces to one series, `ts_bind()`,
+#' from: \code{ts_c(`A` = x)} on a single series drops the name and hands
+#' back `time` and `value`. Anything that reduces to one series, `ts_bind()`,
 #' `ts_chain()` and the arithmetic operators, therefore comes back anonymous,
 #' and tsbox calls it `value`.
 #'

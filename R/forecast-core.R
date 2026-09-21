@@ -328,7 +328,7 @@ fc_long <- function(x) {
   }
   idcols <- setdiff(nm, c(tcol, vcol))
   id <- if (length(idcols)) {
-    do.call(paste, c(unname(lapply(d[idcols], as.character)), sep = " · "))
+    do.call(paste, c(unname(lapply(d[idcols], as.character)), sep = " \u00b7 "))
   } else {
     "value"
   }

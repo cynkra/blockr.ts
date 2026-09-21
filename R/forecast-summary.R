@@ -40,7 +40,7 @@ fc_model_one <- function(fit, key) {
     htmltools::div(
       class = "blockr-ts-model__head",
       htmltools::tags$b(fc_method(fit)),
-      htmltools::span(paste0(" · ", length(fit$y), " observations"))
+      htmltools::span(paste0(" \u00b7 ", length(fit$y), " observations"))
     ),
     if (!is.null(g)) fc_stat_strip(g),
     if (!is.null(t) && nrow(t)) {
@@ -64,8 +64,8 @@ fc_model_many <- function(x) {
     htmltools::div(
       class = "blockr-ts-model__head",
       htmltools::tags$b(paste(length(x), "models")),
-      htmltools::span(paste0(" · ", attr(x, "engine"),
-                             " · h = ", attr(x, "h")))
+      htmltools::span(paste0(" \u00b7 ", attr(x, "engine"),
+                             " \u00b7 h = ", attr(x, "h")))
     ),
     htmltools::div(class = "blockr-ts-model__h", "Worst first, by MAPE"),
     fc_table(fc_round(fc_accuracy(x)))

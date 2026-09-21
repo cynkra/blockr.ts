@@ -205,7 +205,7 @@ ts_frame <- function(x) {
   }
 
   id <- if (length(idcols)) {
-    do.call(paste, c(unname(lapply(d[idcols], as.character)), sep = " · "))
+    do.call(paste, c(unname(lapply(d[idcols], as.character)), sep = " \u00b7 "))
   } else {
     "value"
   }

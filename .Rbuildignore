@@ -1,2 +1,10 @@
 ^doc$
 ^Meta$
+^\.claude$
+^_pkgdown\.yml$
+^dev$
+^CLAUDE\.md$
+^node_modules$
+^package\.json$
+^package-lock\.json$
+^tests/js$

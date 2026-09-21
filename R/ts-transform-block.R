@@ -172,7 +172,7 @@ ts_verb_fields <- function(ns, verb, facts, state) {
     verb,
     index = list(
       ts_select(ns("base"), "Base period", periods,
-                selected = ts_one_of(state$base, periods)),
+                selected = ts_one_of(state$base, periods))
     ),
     span = list(
       ts_select(ns("start"), "Start", c("First" = "", periods),

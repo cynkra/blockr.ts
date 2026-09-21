@@ -1,289 +1,146 @@
 # blockr.ts
 
-**Time Series Analysis Blocks for blockr**
+Time series support for [blockr](https://blockr-org.github.io/blockr.site/).
+Two things: a convention about what a time series *is*, and a preview that
+draws one. Six blocks build on top of them.
 
-Specialized time series functionality for blockr using tsbox and dygraphs. Provides comprehensive blocks for loading, transforming, and visualizing time series data as interactive dygraphs.
+## The convention
 
-## Features
+**A time series is any data frame [tsbox](https://docs.ropensci.org/tsbox/)
+can read as one.** No class, no wrapper, no declaration step. A tsboxable
+frame is a data frame, so every dplyr, io and viz block keeps working on it,
+and anything those blocks produce is still a time series if it still looks
+like one.
 
-- 📊 **Interactive Dygraphs**: All outputs render as interactive time series charts
-- 📦 **25 Built-in Datasets**: Easy access to R's time series datasets
-- 🔄 **Comprehensive Transformations**: Changes, frequency conversion, lag/lead, scaling
-- 📈 **Advanced Analysis**: Forecasting, decomposition, PCA for multivariate series
-- 🎨 **Professional UI**: Consistent design following blockr.ggplot patterns
-- 🎯 **tsbox Integration**: Seamless format conversion and manipulation
+tsbox decides, and its refusals do the work. A table of orders with a date and
+an amount *is* a time series and draws as one. A table with one row per order
+and several orders a day is not: `ts_tbl()` errors with "duplicated
+information" and the frame falls through to the ordinary table preview. So do
+`mtcars`, `iris` and anything with two numeric columns, where tsbox declines
+rather than guessing which one is the value.
 
-## Installation
+Where tsbox cannot read a frame, the fix is **blockr.dplyr**, not a block of
+ours. A CSV of `month` (as the text `"2021-01"`), `sales`, `costs` needs a
+select to drop the second numeric column and a rename to `time` and `value`,
+which is also what makes tsbox parse the month strings into dates.
+
+## The preview
+
+`ts_display` is a `blockr.core::tabular_display`. Turn it on per app:
 
 ```r
-# Install dependencies
-install.packages(c("tsbox", "dygraphs", "forecast"))
-
-# Install blockr.core if not already installed
-# remotes::install_github("blockr-org/blockr.core")
-
-# Install blockr.ts
-devtools::install()
+options(blockr.tabular_display = blockr.ts::ts_display)
 ```
 
-## Quick Start
+It draws when it can resolve the result and hands **everything else to the
+display the app already had**, so switching it on cannot change how a
+non-series block looks. Every drawable block gets a chart/table switch at the
+top right of its preview; the table side is the fallback display rendering it.
+
+The chart is [uPlot](https://github.com/leeoniya/uPlot) 1.6.32, vendored in
+`inst/js`. Measured on `EuStockMarkets`, 1860 × 4 points: 22 KB gzipped and
+1.8 ms to draw, against 363 KB and 8.7 ms for ECharts on the same payload.
+
+`ts_resolve()` is the seam for results tsbox cannot read. A package whose
+block produces a model adds a method rather than a branch inside the chart,
+which is how a fitted forecast draws without the chart knowing what one is.
+
+## The blocks
+
+| Block | Takes | Gives |
+|---|---|---|
+| `new_ts_dataset_block()` | — | a built-in `ts` or `mts` object as a long frame |
+| `new_ts_transform_block()` | one series | the same series, transformed |
+| `new_ts_combine_block()` | two or more | one frame |
+| `new_ts_pick_block()` | many series | a few |
+| `new_ts_forecast_block()` | a series | **fitted models** |
+| `new_ts_forecast_series_block()` | fitted models | a frame |
+
+### Transform
+
+One block for all sixteen unary tsbox verbs: changes, index, span, lag,
+frequency, trend, gaps. Pick the function from the tile grid in the gear; the
+arguments under it are the ones that function takes, and they are built from
+`tsbox::ts_summary()` of whatever arrived. The base-period list is bounded by
+the series, the frequency list offers only frequencies coarser than the data
+has, and "one year" in the lag list is 12 or 4 because the data said so.
 
 ```r
-library(blockr.core)
-library(blockr.ts)
+new_ts_transform_block(verb = "pcy")
+new_ts_transform_block(verb = "index", base = "1954-01-01")
+```
 
-# Create a pipeline using new_board()
+Sixteen constructors would be sixteen copies of one file, and changing your
+mind about a verb would be a delete and two reconnections rather than a click.
+
+### Pick
+
+A list with one row per series, a sparkline of its shape beside each. One
+Census MARTS download is 168 series whose names differ by a couple of words,
+so a multi-select of 168 ids gives you nothing to choose on; the shape does.
+
+### Forecast
+
+**The block returns the model, not a frame.** A forecast is a point path, two
+or more interval paths, the fitted values, the residuals and whatever the
+engine chose, and collapsing that at the block boundary throws away everything
+the second question needs. The preview draws the model; the hamburger switches
+to the model output, which is the fit and its parameters at one target and a
+table sorted worst-first at several.
+
+```r
+new_ts_forecast_block(engine = "arima", h = 24)
+new_ts_forecast_block(target = c("mdeaths", "fdeaths"), engine = "var")
+```
+
+Engines are `"ets"`, `"arima"`, `"theta"` and `"var"`. The target is always a
+multiselect and the result is always a named list of models, length one when
+one series is picked: a control that changes the output type when you touch it
+breaks the board downstream. For every engine but VAR, several targets means a
+loop; VAR treats the set as one system.
+
+`new_ts_forecast_series_block()` turns the models back into a frame: the
+forecast, the fitted values, the residuals, the components, or one row of
+accuracy per series.
+
+**The interval convention lives on the extractor**, because `(id, time, value)`
+has no column for an interval and the only representation that stays tsboxable
+is more series:
+
+```
+mdeaths
+mdeaths_lower_80
+mdeaths_upper_80
+```
+
+The chart pairs `_lower_`/`_upper_` back into a band. The convention being in
+the id is what makes it survive the trip: a frame can go through three dplyr
+blocks and still draw its band, and a board that never heard of forecasting
+draws five lines rather than failing. An attribute on the frame survives
+nothing.
+
+## Install
+
+```r
+pak::pak("blockr-org/blockr.ts")
+```
+
+`vars` (VAR) and `broom` (the model output) are Suggests.
+
+## Try it
+
+```r
+pkgload::load_all("blockr.ts")
+options(blockr.tabular_display = blockr.ts::ts_display)
+
 blockr.core::serve(
-  new_board(
-    blocks = c(
-      data = new_ts_dataset_block(dataset = "AirPassengers"),
-      transform = new_ts_change_block(method = "pcy")
-    ),
-    links = c(
-      data_to_transform = new_link("data", "transform")
-    )
+  blockr.core::new_static_block(
+    tsbox::ts_tbl(tsbox::ts_c(mdeaths = datasets::mdeaths,
+                              fdeaths = datasets::fdeaths))
   )
 )
 ```
 
-## Available Blocks
-
-### Data Blocks
-
-#### `new_ts_dataset_block()`
-Access all 25 built-in R time series datasets with an intuitive selector.
-
-```r
-blockr.core::serve(
-  new_ts_dataset_block(dataset = "EuStockMarkets")
-)
-```
-
-
-### Transform Blocks
-
-#### `new_ts_change_block()`
-Calculate various types of changes: percentage, differences, year-over-year.
-
-![Change Block](man/figures/ts-change-block.png)
-
-```r
-blockr.core::serve(
-  new_ts_change_block(method = "pcy"),
-  data = list(data = tsbox::ts_tbl(datasets::AirPassengers))
-)
-```
-
-**Methods:**
-- `pc`: Period-on-period percentage change
-- `pcy`: Year-on-year percentage change
-- `pca`: Annualized percentage change
-- `diff`: First differences
-- `diffy`: Year-on-year differences
-
-#### `new_ts_frequency_block()`
-Convert time series between temporal granularities with smart aggregation.
-
-![Frequency Block](man/figures/ts-frequency-block.png)
-
-```r
-blockr.core::serve(
-  new_ts_frequency_block(to = "year", aggregate = "mean"),
-  data = list(data = tsbox::ts_tbl(datasets::AirPassengers))
-)
-```
-
-**Features:**
-- Automatic frequency detection
-- Smart target selection (only allows aggregation)
-- Multiple aggregation methods: mean, sum, first, last, min, max
-
-#### `new_ts_select_block()`
-Select specific series from multivariate time series data.
-
-![Select Block](man/figures/ts-select-block.png)
-
-```r
-multivariate_data <- tsbox::ts_c(datasets::mdeaths, datasets::fdeaths)
-
-blockr.core::serve(
-  new_ts_select_block(series = "mdeaths", multiple = FALSE),
-  data = list(data = tsbox::ts_tbl(multivariate_data))
-)
-```
-
-#### `new_ts_lag_block()`
-Shift time series forward (lag) or backward (lead).
-
-![Lag Block](man/figures/ts-lag-block.png)
-
-```r
-blockr.core::serve(
-  new_ts_lag_block(by = 12),
-  data = list(data = tsbox::ts_tbl(datasets::AirPassengers))
-)
-```
-
-#### `new_ts_span_block()`
-Filter time series to specific date ranges with an intuitive range slider.
-
-![Span Block](man/figures/ts-span-block.png)
-
-```r
-blockr.core::serve(
-  new_ts_span_block(start = 1950, end = 1955),
-  data = list(data = tsbox::ts_tbl(datasets::AirPassengers))
-)
-```
-
-### Analysis Blocks
-
-#### `new_ts_scale_block()`
-Scale, normalize, or index time series for comparison.
-
-![Scale Block](man/figures/ts-scale-block.png)
-
-```r
-blockr.core::serve(
-  new_ts_scale_block(method = "index"),
-  data = list(data = tsbox::ts_tbl(datasets::AirPassengers))
-)
-```
-
-**Methods:**
-- `normalize`: Scale to mean=0, sd=1
-- `index`: Index to base period (100)
-- `minmax`: Scale to [0, 1] range
-
-#### `new_ts_decompose_block()`
-Extract trend, seasonal, and remainder components.
-
-![Decompose Block](man/figures/ts-decompose-block.png)
-
-```r
-blockr.core::serve(
-  new_ts_decompose_block(component = "seasonal_adjusted"),
-  data = list(data = tsbox::ts_tbl(datasets::AirPassengers))
-)
-```
-
-#### `new_ts_forecast_block()`
-Generate forecasts with confidence intervals.
-
-![Forecast Block](man/figures/ts-forecast-block.png)
-
-```r
-blockr.core::serve(
-  new_ts_forecast_block(horizon = 24),
-  data = list(data = tsbox::ts_tbl(datasets::AirPassengers))
-)
-```
-
-#### `new_ts_pca_block()`
-Principal Component Analysis for multivariate time series.
-
-![PCA Block](man/figures/ts-pca-block.png)
-
-```r
-blockr.core::serve(
-  new_ts_pca_block(n_components = 2),
-  data = list(data = tsbox::ts_tbl(datasets::EuStockMarkets))
-)
-```
-
-#### `new_ts_to_df_block()`
-Convert time series data to regular data frame format, removing the dygraph visualization. Useful for integrating with non-TS blocks or exporting data.
-
-```r
-blockr.core::serve(
-  new_ts_to_df_block(format = "long"),
-  data = list(data = tsbox::ts_tbl(tsbox::ts_c(datasets::mdeaths, datasets::fdeaths)))
-)
-
-blockr.core::serve(
-  new_ts_to_df_block(format = "wide"),
-  data = list(data = tsbox::ts_tbl(tsbox::ts_c(datasets::mdeaths, datasets::fdeaths)))
-)
-```
-
-#### `new_ts_from_df_block()`
-Convert wide-format data frames to time series format with dygraph visualization. Automatically detects time columns and converts numeric columns to separate series.
-
-```r
-df_wide <- data.frame(
-  date = seq(as.Date("2020-01-01"), by = "month", length.out = 24),
-  sales = rnorm(24, 100, 10),
-  revenue = rnorm(24, 1000, 100),
-  costs = rnorm(24, 500, 50)
-)
-
-blockr.core::serve(
-  new_ts_from_df_block(),
-  data = list(data = df_wide)
-)
-```
-
-### Building Pipelines
-
-The recommended approach uses `blockr::run_app()` with `blockr.dock` for the modern dock-based UI with the DAG extension:
-
-#### Simple Pipeline
-
-```r
-library(blockr)
-library(blockr.ts)
-
-run_app(
-  blocks = c(
-    data = new_ts_dataset_block(dataset = "AirPassengers"),
-    change = new_ts_change_block(method = "pcy")
-  ),
-  links = list(from = "data", to = "change", input = "data")
-)
-```
-
-#### Comprehensive Time Series Workflow
-
-A full analysis pipeline demonstrating multiple transformations:
-
-```r
-library(blockr)
-library(blockr.ts)
-
-run_app(
-  blocks = c(
-    data = new_ts_dataset_block(dataset = "EuStockMarkets"),
-    select = new_ts_select_block(series = c("DAX", "FTSE")),
-    scale = new_ts_scale_block(method = "index"),
-    change = new_ts_change_block(method = "pcy"),
-    freq = new_ts_frequency_block(to = "quarter", aggregate = "mean")
-  ),
-  links = list(
-    list(from = "data", to = "select", input = "data"),
-    list(from = "select", to = "scale", input = "data"),
-    list(from = "scale", to = "change", input = "data"),
-    list(from = "change", to = "freq", input = "data")
-  )
-)
-```
-
-#### Alternative: Direct serve() approach
-
-For quick testing without the full dock UI:
-
-```r
-library(blockr.core)
-library(blockr.ts)
-
-blockr.core::serve(
-  new_ts_change_block(method = "pcy"),
-  data = list(data = tsbox::ts_tbl(datasets::AirPassengers))
-)
-```
-
-## See Also
-
-- [blockr.core](https://github.com/blockr-org/blockr.core) - Core blockr framework
-- [blockr.ggplot](https://github.com/blockr-org/blockr.ggplot) - ggplot2 visualization blocks
-- [tsbox](https://www.tsbox.help/) - Time series toolbox
-- [dygraphs](https://rstudio.github.io/dygraphs/) - Interactive time series charts
+`dev/` has three boards: `app-ts-blocks.R` for the four data blocks,
+`app-ts-forecast.R` for the two forecast blocks, `app-ts-display.R` for the
+preview on its own.

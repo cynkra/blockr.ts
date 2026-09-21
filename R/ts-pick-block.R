@@ -110,7 +110,7 @@ ts_pick_rows <- function(data) {
     return(list())
   }
 
-  key <- do.call(paste, c(d[idc], sep = " · "))
+  key <- do.call(paste, c(d[idc], sep = " \u00b7 "))
   parts <- split(seq_len(nrow(d)), factor(key, levels = unique(key)))
 
   lapply(names(parts), function(k) {

@@ -121,7 +121,7 @@ fc_components <- function(fit, key) {
   keep <- nm[nm %in% c("l", "b", "s1")]
   lab <- c(l = "level", b = "trend", s1 = "season")
   do.call(rbind, lapply(keep, function(cl) {
-    fc_rows(paste0(key, " · ", lab[[cl]]), st[, cl])
+    fc_rows(paste0(key, " \u00b7 ", lab[[cl]]), st[, cl])
   }))
 }
 
@@ -182,12 +182,23 @@ ts_resolve.ts_forecast <- function(x) {
   ts_forecast_frame(x)
 }
 
-#' @param ... Ignored.
-#' @rdname ts_forecast
+#' A fitted forecast, in one line per series
+#'
+#' The engine, the horizon, the levels, and then what each target's model
+#' turned out to be. That last part is the reason to print one at all: the
+#' engine is what you asked for and the method is what you got.
+#'
+#' @param x A `ts_forecast`.
+#' @param ... Ignored, for compatibility with the generic.
+#' @return `x`, invisibly.
+#'
+#' @examples
+#' print(ts_forecast(tsbox::ts_tbl(datasets::mdeaths), h = 4))
+#'
 #' @export
 print.ts_forecast <- function(x, ...) {
-  cat("<ts_forecast>", attr(x, "engine"), "· h =", attr(x, "h"),
-      "· levels", paste(attr(x, "levels"), collapse = "/"), "\n")
+  cat("<ts_forecast>", attr(x, "engine"), "\u00b7 h =", attr(x, "h"),
+      "\u00b7 levels", paste(attr(x, "levels"), collapse = "/"), "\n")
   for (k in names(x)) {
     cat("  ", k, ": ", fc_method(x[[k]]), "\n", sep = "")
   }

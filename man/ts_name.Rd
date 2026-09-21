@@ -17,8 +17,8 @@ A tibble with \code{id} first.
 \description{
 tsbox has no call that names one series. \code{ts_c()} builds the \code{id} column by
 deparsing its arguments, so it needs two of them to have anything to build
-from: \verb{ts_c(\\}A\\verb{ = x)} on a single series drops the name and hands back
-\code{time} and \code{value}. Anything that reduces to one series, \code{ts_bind()},
+from: \code{ts_c(`A` = x)} on a single series drops the name and hands
+back \code{time} and \code{value}. Anything that reduces to one series, \code{ts_bind()},
 \code{ts_chain()} and the arithmetic operators, therefore comes back anonymous,
 and tsbox calls it \code{value}.
 }
