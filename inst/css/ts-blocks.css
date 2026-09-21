@@ -1,0 +1,255 @@
+/* blockr.ts block chrome.
+ *
+ * These blocks are R-driven: they render Shiny's markup, so looking native
+ * means styling that markup rather than building DOM. Hence `selectize =
+ * FALSE` on the R side and an `appearance: none` native <select> here; with
+ * Selectize the real <select> is hidden and nothing below could reach it.
+ *
+ * Sizing is the design-system tier: 42px controls, 8px radius, grey-50 fill,
+ * grey-200 border, 12px/500/grey-500 labels, one focus ring. The tiles take
+ * their geometry from blockr.ggplot's type picker so the two read as the
+ * same control.
+ */
+
+/* ---- the gear row ---------------------------------------------------- */
+.blockr-ts-header {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+}
+.blockr-ts-section {
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 12px;
+}
+
+/* ---- the function tiles ---------------------------------------------- */
+.blockr-ts-tiles__head {
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  font-weight: var(--blockr-font-weight-medium, 500);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--blockr-grey-400, #9ca3af);
+  margin: 10px 0 4px;
+}
+.blockr-ts-tiles__head:first-child { margin-top: 0; }
+.blockr-ts-tiles__grid {
+  display: grid;
+  /* 76px fits "Period start", the longest label, without truncation. */
+  grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
+  gap: 6px;
+}
+.blockr-ts-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 9px 4px 7px;
+  background: #fff;
+  border: 1px solid var(--blockr-color-border, #e5e7eb);
+  border-radius: var(--blockr-radius-md, 6px);
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  color: var(--blockr-grey-500, #6b7280);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.blockr-ts-tile:hover {
+  background: var(--blockr-grey-50, #f9fafb);
+  border-color: var(--blockr-grey-300, #d1d5db);
+}
+.blockr-ts-tile.is-active {
+  background: #eff6ff;
+  border-color: var(--blockr-color-primary, #2563eb);
+  color: var(--blockr-color-primary, #2563eb);
+  font-weight: var(--blockr-font-weight-medium, 500);
+}
+.blockr-ts-tile svg { display: block; opacity: 0.5; }
+.blockr-ts-tile.is-active svg { opacity: 0.9; }
+.blockr-ts-tile > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+/* ---- the argument row ------------------------------------------------ */
+.blockr-ts-fields {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  margin-top: 14px;
+}
+.blockr-ts-fields:empty { display: none; }
+
+/* The basis is a decision, not a number: at a narrow panel the field wraps
+   to its own line rather than ellipsizing the value, because the value in
+   the select IS the choice being made. */
+.blockr-ts-field {
+  flex: 1 1 170px;
+  min-width: 0;
+}
+
+/* Shiny's wrapper carries a bottom margin and an inline width. Zero both and
+   let the field own its spacing. */
+.blockr-ts-field .form-group,
+.blockr-ts-field .shiny-input-container {
+  margin-bottom: 0;
+  width: 100% !important;
+}
+.blockr-ts-field .control-label {
+  display: block;
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  font-weight: var(--blockr-font-weight-medium, 500);
+  color: var(--blockr-grey-500, #6b7280);
+  margin-bottom: 4px;
+}
+.blockr-ts-field select.form-control,
+.blockr-ts-field input.form-control {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 42px;
+  padding: 0 10px;
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  color: var(--blockr-grey-900, #111827);
+  background: var(--blockr-grey-50, #f9fafb);
+  border: 1px solid var(--blockr-grey-200, #e5e7eb);
+  border-radius: var(--blockr-radius-lg, 8px);
+  box-shadow: none;
+}
+.blockr-ts-field select.form-control {
+  padding-right: 28px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 16 16' fill='none' stroke='%239ca3af' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+.blockr-ts-field select.form-control:focus,
+.blockr-ts-field input.form-control:focus {
+  outline: none;
+  border-color: var(--blockr-color-primary, #2563eb);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+.blockr-ts-field--check { flex: 0 0 auto; align-self: center; }
+.blockr-ts-field--check .checkbox { margin: 0; }
+.blockr-ts-field--check label {
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  color: var(--blockr-grey-600, #4b5563);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.blockr-ts-field--check input[type="checkbox"] {
+  accent-color: var(--blockr-color-primary, #2563eb);
+  margin: 0;
+}
+
+.blockr-ts-hint {
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  color: var(--blockr-grey-400, #9ca3af);
+  margin-top: 8px;
+  line-height: 1.45;
+}
+
+/* ---- the variadic input rows ----------------------------------------- */
+.blockr-ts-slots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+.blockr-ts-slot {
+  flex: 1 1 220px;
+  min-width: 0;
+  border: 1px solid var(--blockr-color-border, #e5e7eb);
+  border-radius: var(--blockr-radius-lg, 8px);
+  padding: 8px 10px 10px;
+}
+.blockr-ts-slot__ref {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  color: var(--blockr-grey-400, #9ca3af);
+  margin-bottom: 4px;
+}
+.blockr-ts-slot .blockr-ts-field { flex: 1 1 auto; }
+
+/* ---- the series picker ----------------------------------------------- */
+.blockr-ts-pick__bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.blockr-ts-pick__bar .blockr-ts-field { flex: 1 1 200px; max-width: 280px; }
+.blockr-ts-pick__count {
+  margin-left: auto;
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  color: var(--blockr-grey-400, #9ca3af);
+  white-space: nowrap;
+}
+.blockr-ts-pick__link {
+  border: 0;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  color: var(--blockr-color-primary, #2563eb);
+}
+.blockr-ts-pick__list {
+  max-height: 330px;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid var(--blockr-color-border, #e5e7eb);
+  border-radius: var(--blockr-radius-lg, 8px);
+}
+.blockr-ts-pick__head,
+.blockr-ts-pick__row {
+  display: grid;
+  grid-template-columns: 20px 100px minmax(0, 1fr) 48px 118px 82px;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 10px;
+}
+.blockr-ts-pick__head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #fff;
+  border-bottom: 1px solid var(--blockr-color-border, #e5e7eb);
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--blockr-grey-400, #9ca3af);
+}
+.blockr-ts-pick__row {
+  border-bottom: 1px solid rgba(128, 128, 135, 0.1);
+  cursor: pointer;
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  margin: 0;
+  font-weight: 400;
+}
+.blockr-ts-pick__row:last-child { border-bottom: 0; }
+.blockr-ts-pick__row:hover { background: var(--blockr-grey-50, #f9fafb); }
+.blockr-ts-pick__row.is-on { background: #eff6ff; }
+.blockr-ts-pick__row.is-hidden { display: none; }
+.blockr-ts-pick__row input[type="checkbox"] {
+  margin: 0;
+  accent-color: var(--blockr-color-primary, #2563eb);
+}
+.blockr-ts-pick__row svg { display: block; color: var(--blockr-grey-400, #9ca3af); }
+.blockr-ts-pick__row.is-on svg { color: var(--blockr-color-primary, #2563eb); }
+.blockr-ts-pick__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--blockr-grey-900, #111827);
+}
+.blockr-ts-pick__num {
+  text-align: right;
+  color: var(--blockr-grey-500, #6b7280);
+  font-variant-numeric: tabular-nums;
+}
+.blockr-ts-pick__span {
+  color: var(--blockr-grey-400, #9ca3af);
+  font-variant-numeric: tabular-nums;
+}

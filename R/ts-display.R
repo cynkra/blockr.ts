@@ -160,6 +160,15 @@ tabular_output.ts_display <- function(x, result, block, session) {
   }
 
   if (identical(ts_view(session), "table")) {
+
+    # A MODEL IS NOT A FRAME, so for a fitted forecast the other side of the
+    # switch is the MODEL OUTPUT rather than the app's table preview, which
+    # would print a list. Same shape as the seas card: the chart is the model
+    # drawn, the hamburger is the model read.
+    if (inherits(result, "ts_forecast")) {
+      return(shiny::renderUI(fc_model_view(result)))
+    }
+
     # WHATEVER THE CHART ACCEPTED, THE TABLE HAS TO ACCEPT TOO, or the switch
     # is a button that breaks the panel. tsbox reads `ts`, `xts`, `zoo` and
     # the rest, so `ts_frame()` resolves a plain `ts` object happily and the

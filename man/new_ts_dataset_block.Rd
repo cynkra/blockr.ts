@@ -2,17 +2,30 @@
 % Please edit documentation in R/ts-dataset-block.R
 \name{new_ts_dataset_block}
 \alias{new_ts_dataset_block}
-\title{Time Series Dataset Selector Block}
+\title{A built-in time series dataset}
 \usage{
-new_ts_dataset_block(dataset = "AirPassengers", ...)
+new_ts_dataset_block(dataset = "AirPassengers", package = "datasets", ...)
 }
 \arguments{
-\item{dataset}{Name of the dataset to load (default: "AirPassengers")}
+\item{dataset}{Name of the object.}
 
-\item{...}{Additional arguments passed to new_ts_data_block}
+\item{package}{Package to look in.}
+
+\item{...}{Forwarded to \code{\link[blockr.core:new_data_block]{blockr.core::new_data_block()}}.}
 }
 \description{
-A data block that provides access to all built-in R time series datasets.
-Supports both univariate and multivariate time series, automatically converting
-them to tidy data frames using tsbox::ts_tbl().
+Every \code{ts} and \code{mts} object in an installed package, as a long frame.
+}
+\details{
+This block exists for one reason: \code{blockr.core::new_dataset_block()}
+filters its list to objects that inherit from \code{data.frame}, so it never
+offers \code{AirPassengers}. Thirty-one of them ship with R, forty-one series
+once the multivariate ones are counted out.
+
+The result is \code{tsbox::ts_tbl()}, not the \code{ts} object, because a frame is
+what every other block on a board can work on.
+}
+\examples{
+new_ts_dataset_block(dataset = "AirPassengers")
+
 }

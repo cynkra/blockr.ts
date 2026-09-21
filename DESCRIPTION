@@ -1,35 +1,33 @@
 Package: blockr.ts
 Title: Time Series Data Blocks for blockr
-Version: 0.0.1
+Version: 0.1.0
 Authors@R:
     c(person(given = "Christoph",
              family = "Sax",
              role = c("aut", "cre"),
              email = "christoph@cynkra.com"))
-Description: Time series analysis and transformation blocks for blockr.
-    Provides specialized blocks for working with time series data using
-    tsbox for format conversion and analysis.
+Description: Time series support for blockr. A preview that draws any frame
+    tsbox can read as a chart, and three blocks: transform one series,
+    combine several, and pick a few out of many.
 License: GPL (>= 3)
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
 Imports:
     shiny,
+    forecast,
     blockr.core (>= 0.0.1),
-    tibble,
-    glue,
+    blockr.dplyr,
     tsbox,
-    htmlwidgets,
-    ggplot2,
-    plotly,
-    dygraphs,
     jsonlite,
     htmltools,
-    xts
+    stats,
+    utils
 Suggests:
     blockr.ui,
+    broom,
+    vars,
     testthat (>= 3.0.0),
-    shinytest2,
     knitr,
     rmarkdown
 Config/testthat/edition: 3

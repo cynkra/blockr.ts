@@ -107,6 +107,57 @@ ts_chart_html <- function(d, toggle_id = NULL) {
 #' so the last two are known without asking. Several id columns are pasted
 #' into one label, because a chart legend has one dimension.
 #'
+#' Resolve a block result to a long frame, or `NULL`
+#'
+#' The seam for results that are not data frames. A model object holds a
+#' series but tsbox cannot read it, so a package that produces one adds a
+#' method here rather than a branch inside the chart.
+#'
+#' Returning `NULL` is how a method says "not a series", and it is not an
+#' error: the display falls through to whatever preview the app already had.
+#'
+#' @param x A block result.
+#' @return A data frame tsbox can read, or `NULL`.
+#'
+#' @examples
+#' ts_resolve(datasets::AirPassengers)
+#' ts_resolve(datasets::mtcars)
+#'
+#' @export
+ts_resolve <- function(x) {
+  UseMethod("ts_resolve")
+}
+
+#' @export
+ts_resolve.default <- function(x) {
+  tryCatch(
+    suppressMessages(tsbox::ts_tbl(x)),
+    error = function(e) NULL,
+    warning = function(w) NULL
+  )
+}
+
+#' The one column of a kind, by name first and type second
+#'
+#' tsbox goes on column names before anything else, so `name` wins when it is
+#' there. Otherwise there has to be exactly ONE column of the right type: two
+#' numeric columns and no `value` is precisely the case where tsbox refuses to
+#' guess, and so should we.
+#'
+#' @param d A data frame.
+#' @param name The canonical name.
+#' @param is A type predicate.
+#' @param exclude Columns already spoken for.
+#' @noRd
+ts_col <- function(d, name, is, exclude = character()) {
+  nm <- setdiff(names(d), exclude)
+  if (name %in% nm && is(d[[name]])) {
+    return(name)
+  }
+  hit <- nm[vapply(d[nm], is, logical(1))]
+  if (length(hit) == 1L) hit else NULL
+}
+
 #' @param x A block result.
 #' @return A data frame with `id`, `time` and `value`, or `NULL`.
 #' @noRd
@@ -116,45 +167,42 @@ ts_frame <- function(x) {
     return(NULL)
   }
 
-  d <- tryCatch(
-    suppressMessages(tsbox::ts_tbl(x)),
-    error = function(e) NULL,
-    warning = function(w) NULL
-  )
-  if (is.null(d) || !nrow(d) || ncol(d) < 2L) {
+  d <- ts_resolve(x)
+  if (is.null(d) || !is.data.frame(d) || !nrow(d) || ncol(d) < 2L) {
     return(NULL)
   }
 
   nm <- names(d)
+  is_time <- function(x) inherits(x, c("Date", "POSIXct", "POSIXt"))
 
   # `ts_tbl()` SUCCEEDING IS NOT THE SAME AS IT HAVING FOUND A SERIES. Handed
   # `time, value, costs` it returns all three columns unchanged: it recognised
-  # `time` by name and left the rest alone. Reading the last two as time and
-  # value then charts `costs` against `value`, one series per date, which is
-  # both wrong and confident.
+  # `time` by name and left the rest alone. Reading two of them as time and
+  # value then charts one column against another, one series per date, which
+  # is both wrong and confident.
   #
-  # A frame tsbox has actually resolved has its time column second to last and
-  # its value last. Check that rather than trusting the call not to have
-  # thrown.
-  tcol <- nm[[length(nm) - 1L]]
-  vcol <- nm[[length(nm)]]
-  ids <- setdiff(nm, c(tcol, vcol))
-
-  is_time <- function(x) inherits(x, c("Date", "POSIXct", "POSIXt"))
-
-  if (!is_time(d[[tcol]]) || !is.numeric(d[[vcol]])) {
+  # RESOLVE BY NAME AND TYPE, NEVER BY POSITION. The obvious guard, "the time
+  # column is second to last and the value column is last", is wrong because
+  # `ts_tbl()` ONLY reorders when it converts from something else. A data
+  # frame it can already read comes back exactly as it went in, so all five of
+  # `time,value`, `value,time`, `id,time,value`, `time,value,id` and
+  # `time,id,value` are frames tsbox reads and the positional guard rejected
+  # three of them. `time, value, id` in particular is what you get from the
+  # obvious way to name a series.
+  tcol <- ts_col(d, "time", is_time)
+  vcol <- ts_col(d, "value", is.numeric, exclude = tcol)
+  if (is.null(tcol) || is.null(vcol)) {
     return(NULL)
   }
-  # An id that is a number or a date is another sign the frame was passed
-  # through rather than reduced.
-  if (length(ids) &&
-      any(vapply(d[ids], function(x) is.numeric(x) || is_time(x), logical(1)))) {
-    return(NULL)
-  }
-
-  tcol <- nm[[length(nm) - 1L]]
-  vcol <- nm[[length(nm)]]
   idcols <- setdiff(nm, c(tcol, vcol))
+
+  # An id that is a number or a date is the sign that the frame was passed
+  # through rather than reduced: `time, value, costs` lands here.
+  if (length(idcols) &&
+      any(vapply(d[idcols], function(x) is.numeric(x) || is_time(x),
+                 logical(1)))) {
+    return(NULL)
+  }
 
   id <- if (length(idcols)) {
     do.call(paste, c(unname(lapply(d[idcols], as.character)), sep = " · "))
@@ -207,7 +255,7 @@ ts_chart_dep <- function() {
 #'
 #' @noRd
 ts_asset_version <- function() {
-  paste0(utils::packageVersion("blockr.ts"), ".8")
+  paste0(utils::packageVersion("blockr.ts"), ".10")
 }
 
 #' Resolve one of this package's asset directories

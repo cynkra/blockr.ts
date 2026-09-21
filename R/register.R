@@ -1,74 +1,40 @@
-#' Register time series blocks
+#' Register the time series blocks
 #'
-#' Register the time series blocks with the blockr registry
+#' Four entries, where there were fourteen. The split is by INPUT SHAPE, not
+#' by function: sixteen unary tsbox verbs are one block with a function
+#' picker, seven ways of combining series are another, and picking a few
+#' series out of many is a third because it needs a list you can read rather
+#' than a select you cannot.
 #'
 #' @export
 register_ts_blocks <- function() {
   blockr.core::register_blocks(
     c(
-      "new_ts_airpassenger_block",
       "new_ts_dataset_block",
-      "new_ts_change_block",
-      "new_ts_frequency_block",
-      "new_ts_select_block",
-      "new_ts_lag_block",
-      "new_ts_span_block",
-      "new_ts_scale_block",
+      "new_ts_transform_block",
+      "new_ts_combine_block",
+      "new_ts_pick_block",
       "new_ts_forecast_block",
-      "new_ts_decompose_block",
-      "new_ts_pca_block",
-      "new_ts_bind_block",
-      "new_ts_from_df_block",
-      "new_ts_to_df_block"
+      "new_ts_forecast_series_block"
     ),
     name = c(
-      "AirPassengers Time Series",
-      "Time Series Dataset Selector",
-      "Time Series Changes",
-      "Frequency Conversion",
-      "Series Selection",
-      "Lag/Lead Transform",
-      "Time Range Selection",
-      "Scale & Index",
+      "Time series dataset",
+      "Transform series",
+      "Combine series",
+      "Pick series",
       "Forecast",
-      "Decomposition",
-      "PCA",
-      "Bind Series",
-      "DataFrame to Time Series",
-      "Time Series to DataFrame"
+      "Forecast series"
     ),
     description = c(
-      "Display AirPassengers time series as an interactive dygraph",
-      "Select and display any built-in R time series dataset",
-      "Calculate various types of changes (%, differences, YoY)",
-      "Convert time series to different frequencies (aggregate/disaggregate)",
-      "Select specific series from multivariate time series data",
-      "Shift time series forward (lag) or backward (lead)",
-      "Filter time series to a specific date range",
-      "Scale, normalize, or index time series data",
-      "Generate forecasts with confidence intervals",
-      "Extract trend, seasonal, and remainder components",
-      "Principal component analysis for multivariate series",
-      "Combine multiple time series into one multivariate series",
-      "Convert wide-format data frames to time series long format",
-      "Convert time series data to regular data frame (long or wide format)"
+      "A built-in ts or mts object as a long frame",
+      "One series in, one out: changes, index, span, lag, frequency, trend, gaps",
+      "Two or more series in: side by side, append, chain-link, ratio, difference",
+      "Choose a few series out of many, by shape",
+      "Fit ETS, ARIMA, Theta or VAR and forecast ahead; returns the models",
+      "A fitted forecast as a frame: point path, intervals, fitted, accuracy"
     ),
-    category = c(
-      "data",
-      "data",
-      "transform",
-      "transform",
-      "transform",
-      "transform",
-      "transform",
-      "transform",
-      "transform",
-      "transform",
-      "transform",
-      "transform",
-      "transform",
-      "transform"
-    ),
+    category = c("input", "transform", "transform", "transform",
+                 "transform", "transform"),
     package = utils::packageName(),
     overwrite = TRUE
   )

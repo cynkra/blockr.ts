@@ -2,10 +2,14 @@
 % Please edit documentation in R/register.R
 \name{register_ts_blocks}
 \alias{register_ts_blocks}
-\title{Register time series blocks}
+\title{Register the time series blocks}
 \usage{
 register_ts_blocks()
 }
 \description{
-Register the time series blocks with the blockr registry
+Four entries, where there were fourteen. The split is by INPUT SHAPE, not
+by function: sixteen unary tsbox verbs are one block with a function
+picker, seven ways of combining series are another, and picking a few
+series out of many is a third because it needs a list you can read rather
+than a select you cannot.
 }

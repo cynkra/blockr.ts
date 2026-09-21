@@ -56,3 +56,16 @@
   margin-left: auto;
   font-variant-numeric: tabular-nums;
 }
+
+/* The interval key. One swatch for every band on the chart, naming the
+   levels: the six series a forecast with two intervals actually carries are
+   one piece of information, not six. Not a button, because there is nothing
+   to toggle. */
+.blockr-ts-legend__item.is-static {
+  cursor: default;
+}
+.blockr-ts-legend__sw--band {
+  height: 8px;
+  border-radius: 2px;
+  background: rgba(128, 128, 135, .28);
+}

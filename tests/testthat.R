@@ -2,6 +2,6 @@
 # See https://r-pkgs.org/testing-basics.html#sec-tests-workflow-interactive
 
 library(testthat)
-library(blockr.fsui)
+library(blockr.ts)
 
-test_check("blockr.fsui")
+test_check("blockr.ts")

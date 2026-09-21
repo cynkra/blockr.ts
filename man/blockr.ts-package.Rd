@@ -6,7 +6,7 @@
 \alias{blockr.ts-package}
 \title{blockr.ts: Time Series Data Blocks for blockr}
 \description{
-Time series analysis and transformation blocks for blockr. Provides specialized blocks for working with time series data using tsbox for format conversion and analysis.
+Time series support for blockr. A preview that draws any frame tsbox can read as a chart, and three blocks: transform one series, combine several, and pick a few out of many.
 }
 \author{
 \strong{Maintainer}: Christoph Sax \email{christoph@cynkra.com}
