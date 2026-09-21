@@ -25,7 +25,8 @@
       root.querySelectorAll('.blockr-ts-pick__row'));
     var count = root.querySelector('.blockr-ts-pick__count');
     var q = root.querySelector('.blockr-search');
-    var clear = root.querySelector('.blockr-ts-pick__link');
+    var allCell = root.querySelector('.blockr-ts-pick__all');
+    var allBox = allCell ? allCell.querySelector('input') : null;
     var sort = {key: null, dir: 1};
 
     function picked() {
@@ -40,13 +41,32 @@
       }
     }
 
+    function visible() {
+      return rows.filter(function (r) {
+        return !r.classList.contains('is-hidden');
+      });
+    }
+
     function paintCount() {
       var n = picked().length;
-      var shown = rows.filter(function (r) {
-        return !r.classList.contains('is-hidden');
-      }).length;
+      var shown = visible();
       count.textContent = n + ' of ' + rows.length + ' selected' +
-        (shown < rows.length ? ', ' + shown + ' shown' : '');
+        (shown.length < rows.length ? ', ' + shown.length + ' shown' : '');
+
+      // Tri-state, over the rows the filter is showing: checked when they
+      // are all picked, indeterminate while some are.
+      if (!allBox) return;
+      var on = shown.filter(function (r) {
+        return r.classList.contains('is-on');
+      }).length;
+      allBox.checked = shown.length > 0 && on === shown.length;
+      allBox.indeterminate = on > 0 && on < shown.length;
+    }
+
+    function setRow(row, on) {
+      row.classList.toggle('is-on', on);
+      var box = row.querySelector('input[type=checkbox]');
+      if (box) box.checked = on;
     }
 
     // ONE EVENT PER GESTURE. The checkbox is `pointer-events: none` and the
@@ -55,10 +75,7 @@
     root.addEventListener('click', function (ev) {
       var row = ev.target.closest('.blockr-ts-pick__row');
       if (!row || !root.contains(row)) return;
-      var on = !row.classList.contains('is-on');
-      row.classList.toggle('is-on', on);
-      var box = row.querySelector('input[type=checkbox]');
-      if (box) box.checked = on;
+      setRow(row, !row.classList.contains('is-on'));
       paintCount();
       send();
     });
@@ -123,16 +140,17 @@
       });
     });
 
-    clear.addEventListener('click', function (ev) {
-      ev.stopPropagation();
-      rows.forEach(function (r) {
-        r.classList.remove('is-on');
-        var box = r.querySelector('input[type=checkbox]');
-        if (box) box.checked = false;
+    if (allCell) {
+      allCell.addEventListener('click', function () {
+        var shown = visible();
+        var all = shown.length > 0 && shown.every(function (r) {
+          return r.classList.contains('is-on');
+        });
+        shown.forEach(function (r) { setRow(r, !all); });
+        paintCount();
+        send();
       });
-      paintCount();
-      send();
-    });
+    }
 
     paintCount();
     paintIcons();

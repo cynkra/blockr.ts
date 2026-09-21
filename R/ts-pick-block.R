@@ -200,9 +200,6 @@ ts_pick_ui <- function(ns, rows, picked) {
             type = "search", class = "blockr-search",
             placeholder = "Search\u2026",
             `aria-label` = "Search series"
-          ),
-          htmltools::tags$button(
-            type = "button", class = "blockr-ts-pick__link", "clear"
           )
         )
       ),
@@ -212,7 +209,16 @@ ts_pick_ui <- function(ns, rows, picked) {
           class = "blockr-table blockr-ts-pick__table",
           htmltools::tags$thead(
             htmltools::tags$tr(
-              htmltools::tags$th(class = "blockr-ts-pick__tick", scope = "col"),
+              # Select all / none where the ticks are, not as a link
+              # somewhere else on the row. Indeterminate while some are
+              # picked, and it acts on what the filter is SHOWING, which is
+              # what makes searching then ticking worth doing.
+              htmltools::tags$th(
+                class = "blockr-ts-pick__tick blockr-ts-pick__all",
+                scope = "col", title = "Select all or none",
+                htmltools::tags$input(type = "checkbox", tabindex = "-1",
+                                      `aria-label` = "Select all or none")
+              ),
               htmltools::tags$th(class = "blockr-ts-pick__shape", scope = "col",
                                  "shape"),
               th("name", "series"),
