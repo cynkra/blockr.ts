@@ -65,8 +65,18 @@ new_ts_forecast_series_block <- function(what = "forecast",
             if (is.null(v)) numeric() else as.numeric(v)
           })
 
+          offered <- shiny::reactive(fc_what_offered(data()))
+
+          # A block set to "components" whose upstream engine changes to ARIMA
+          # holds a pick that is no longer on offer. Falling back is right;
+          # keeping it would error on every render, and the board would have
+          # no way to say so. Same shape as `ts_one_of()`.
+          what_now <- shiny::reactive({
+            if (r_what() %in% offered()) r_what() else "forecast"
+          })
+
           output$form <- shiny::renderUI({
-            fc_series_form(session$ns, r_what(), fitted_levels(),
+            fc_series_form(session$ns, what_now(), offered(), fitted_levels(),
                            shiny::isolate(r_levels()),
                            shiny::isolate(r_keep()))
           })
@@ -84,7 +94,7 @@ new_ts_forecast_series_block <- function(what = "forecast",
 
           list(
             expr = shiny::reactive({
-              fc_series_call(r_what(), intersect(r_levels(), fitted_levels()),
+              fc_series_call(what_now(), intersect(r_levels(), fitted_levels()),
                              r_keep())
             }),
             state = list(
@@ -117,6 +127,33 @@ fc_what_keys <- function() {
   c("forecast", "fitted", "residuals", "components", "accuracy")
 }
 
+#' What THIS model can be asked for
+#'
+#' Only ETS carries state paths, so "Components" against an ARIMA, a Theta or
+#' a VAR is a control that can only fail. Same rule the interval list already
+#' follows: the choices come from the model rather than from a fixed list, so
+#' a question the block cannot answer is a question it does not ask.
+#'
+#' `ts_forecast_frame()` still errors when it is called with `"components"`
+#' directly. That is the right answer to a call written by hand; it is the
+#' wrong way to find out from a dropdown.
+#'
+#' @param x A `ts_forecast`, or anything else.
+#' @noRd
+fc_what_offered <- function(x) {
+  keys <- fc_what_keys()
+  if (!inherits(x, "ts_forecast") || !fc_has_components(x)) {
+    keys <- setdiff(keys, "components")
+  }
+  keys
+}
+
+#' @noRd
+fc_has_components <- function(x) {
+  length(x) > 0L &&
+    all(vapply(x, function(f) !is.null(f$model$states), logical(1)))
+}
+
 #' @noRd
 fc_what_labels <- function() {
   c(forecast = "Forecast", fitted = "Fitted", residuals = "Residuals",
@@ -134,9 +171,9 @@ fc_series_call <- function(what, levels, keep_history) {
 }
 
 #' @noRd
-fc_series_form <- function(ns, what, fitted_levels, levels, keep) {
+fc_series_form <- function(ns, what, offered, fitted_levels, levels, keep) {
 
-  lab <- fc_what_labels()
+  lab <- fc_what_labels()[offered]
 
   htmltools::tagList(
     ts_fields(

@@ -118,3 +118,31 @@ test_that("ets gets the tidiers broom does not ship", {
   expect_named(g, c("sigma", "logLik", "AIC", "AICc", "BIC", "nobs"))
   expect_equal(g$nobs, length(m$x))
 })
+
+test_that("components are offered only by a model that has them", {
+  # The error above is the right answer to a hand-written call and the wrong
+  # way to find out from a dropdown, so the control does not offer it.
+  d <- tsbox::ts_tbl(tsbox::ts_c(m = datasets::mdeaths, f = datasets::fdeaths))
+  ets <- ts_forecast(d, target = "m", engine = "ets", h = 4)
+  arima <- ts_forecast(d, target = "m", engine = "arima", h = 4)
+
+  expect_true("components" %in% fc_what_offered(ets))
+  expect_false("components" %in% fc_what_offered(arima))
+  # Every other extraction is on offer whatever fitted the model.
+  expect_setequal(fc_what_offered(arima),
+                  setdiff(fc_what_keys(), "components"))
+  # Not a forecast at all: nothing to read states off.
+  expect_false("components" %in% fc_what_offered(d))
+})
+
+test_that("a mixed set offers components only if every model has them", {
+  d <- tsbox::ts_tbl(tsbox::ts_c(m = datasets::mdeaths, f = datasets::fdeaths))
+  both <- ts_forecast(d, engine = "ets", h = 4)
+  expect_true("components" %in% fc_what_offered(both))
+
+  # One model without states is enough: the frame would be missing a series
+  # rather than a column, which is the kind of gap nobody reads as an error.
+  half <- both
+  half[["f"]]$model$states <- NULL
+  expect_false("components" %in% fc_what_offered(half))
+})
