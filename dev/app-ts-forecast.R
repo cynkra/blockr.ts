@@ -26,8 +26,13 @@ options(
   blockr.tabular_display = blockr.ts::ts_display
 )
 
+# NAMED, so the ids are `mdeaths` and `fdeaths` rather than
+# `datasets::mdeaths`. Unnamed is the case that broke VAR (it names its
+# equations through make.names(), and a tsbox id is a label); that one is
+# pinned in tests/testthat/test-forecast.R rather than left in the demo,
+# where it would only make the tabs hard to read.
 deaths <- as.data.frame(tsbox::ts_tbl(tsbox::ts_c(
-  datasets::mdeaths, datasets::fdeaths
+  mdeaths = datasets::mdeaths, fdeaths = datasets::fdeaths
 )))
 
 board <- blockr.dock::new_dock_board(

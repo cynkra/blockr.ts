@@ -25,6 +25,10 @@
 #' target, sorted worst first, because the reason to ask for it is to find
 #' which series need a hand.
 #'
+#' The rest: `"fitted"` is in-sample, one value per observed period,
+#' `"residuals"` is observed minus fitted, and `"components"` is the level,
+#' trend and season paths, which ETS has and the other engines do not.
+#'
 #' @param what `"forecast"`, `"fitted"`, `"residuals"`, `"components"` or
 #'   `"accuracy"`.
 #' @param levels Which intervals to keep. Empty means all the fitted ones.
@@ -93,8 +97,12 @@ new_ts_forecast_series_block <- function(what = "forecast",
       )
     },
     function(id) {
-      ts_gear(shiny::NS(id), fc_css(),
-              shiny::uiOutput(shiny::NS(id, "form")), open = TRUE)
+      shiny::tagList(
+        blockr.dplyr::blockr_core_js_dep(),
+        blockr.dplyr::blockr_select_dep(),
+        ts_gear(shiny::NS(id), fc_css(),
+                shiny::uiOutput(shiny::NS(id, "form")), open = TRUE)
+      )
     },
     dat_val = function(data) fc_validate_model(data),
     # No levels picked means every level the model carries.
@@ -115,14 +123,6 @@ fc_what_labels <- function() {
     components = "Components", accuracy = "Accuracy")
 }
 
-#' @noRd
-fc_what_hints <- function() {
-  c(forecast = "The point path and its intervals.",
-    fitted = "In-sample, one value per observed period.",
-    residuals = "Observed minus fitted.",
-    components = "Level, trend and season. ETS has these; the others do not.",
-    accuracy = "One row per series, sorted worst first. Not a time series.")
-}
 
 #' @noRd
 fc_series_call <- function(what, levels, keep_history) {
@@ -145,15 +145,15 @@ fc_series_form <- function(ns, what, fitted_levels, levels, keep) {
       # The interval controls belong to the forecast and to nothing else, so
       # they are absent for the other four rather than present and inert.
       if (identical(what, "forecast")) {
-        fc_select_multi(ns("levels"), "Intervals",
+        ts_select_multi(ns("levels"), "Intervals",
                         as.character(fitted_levels), as.character(levels),
-                        empty = "every fitted level")
+                        empty = "every fitted level",
+                        class = "blockr-ts-field--narrow")
       },
       if (identical(what, "forecast")) {
         ts_check(ns("keep_history"), "Keep the history", keep)
       }
-    ),
-    ts_hint(fc_what_hints()[[what]])
+    )
   )
 }
 

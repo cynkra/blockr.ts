@@ -66,3 +66,16 @@ test_that("regressors reach the horizon by lag and by hold", {
 test_that("a target that is not in the data is named", {
   expect_error(ts_forecast(deaths(), target = "nope"), "None of the targets")
 })
+
+test_that("VAR survives ids that are not syntactic names", {
+  skip_if_not_installed("vars")
+  # `tsbox::ts_c(mdeaths, fdeaths)` labels its series `datasets::mdeaths`,
+  # and VAR names its equations after the columns after passing them through
+  # `make.names()`. Looking the forecast up under the original label then
+  # returns NULL and fails inside `ts()`, three calls from the cause.
+  d <- tsbox::ts_tbl(tsbox::ts_c(datasets::mdeaths, datasets::fdeaths))
+  expect_true(any(grepl("::", unique(d$id))))
+  f <- ts_forecast(d, engine = "var", h = 4)
+  expect_named(f, unique(d$id))
+  expect_equal(nrow(ts_forecast_frame(f, keep_history = FALSE)), 2L * 5L * 4L)
+})

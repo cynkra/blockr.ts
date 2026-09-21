@@ -66,7 +66,14 @@ Regressors are the one place this block asks a question it cannot answer
 for you: a fitted regression cannot predict without values of its
 regressors over the horizon. \code{"lag"} shifts them so the values needed were
 observed; \code{"hold"} carries the last one forward and the resulting interval
-treats that guess as an observation, which is why it is not the default.
+TREATS THAT GUESS AS AN OBSERVATION, so it is narrower than the truth.
+That is why \code{"lag"} is the default, and why "from a second input", which
+is the honest third answer, is the one worth building next.
+
+The engines: \code{"ets"} is exponential smoothing with the state chosen by
+AICc, \code{"arima"} is \code{auto.arima()} and the only one here that takes
+regressors, \code{"theta"} is univariate and hard to beat, and \code{"var"} is the
+joint one.
 }
 \examples{
 new_ts_forecast_block(engine = "arima", h = 24)

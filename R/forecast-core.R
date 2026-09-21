@@ -88,14 +88,10 @@ ts_forecast <- function(data, target = character(), engine = "ets", h = 12L,
 #' @noRd
 fc_engines <- function() {
   list(
-    ets = list(label = "ETS", joint = FALSE, xreg = FALSE,
-               hint = "Exponential smoothing, state chosen by AICc."),
-    arima = list(label = "ARIMA", joint = FALSE, xreg = TRUE,
-                 hint = "auto.arima, with optional regressors."),
-    theta = list(label = "Theta", joint = FALSE, xreg = FALSE,
-                 hint = "Univariate and hard to beat."),
-    var = list(label = "VAR", joint = TRUE, xreg = FALSE,
-               hint = "Joint: the targets are one system.")
+    ets = list(label = "ETS", joint = FALSE, xreg = FALSE),
+    arima = list(label = "ARIMA", joint = FALSE, xreg = TRUE),
+    theta = list(label = "Theta", joint = FALSE, xreg = FALSE),
+    var = list(label = "VAR", joint = TRUE, xreg = FALSE)
   )
 }
 
@@ -163,7 +159,15 @@ fc_fit_joint <- function(d, target, engine, h, levels) {
   }
 
   Y <- stats::na.omit(do.call(cbind, ys))
-  colnames(Y) <- target
+
+  # VAR NAMES ITS EQUATIONS AFTER THE COLUMNS, AND IT MAKES THEM SYNTACTIC.
+  # A tsbox id is a label, not a name: `ts_c(mdeaths, fdeaths)` produces
+  # `datasets::mdeaths`, and looking `predict()$fcst` up under that returns
+  # NULL, which then reaches `ts()` as a zero-length vector and errors with
+  # "'ts' object must have one or more observations" three calls away from
+  # the cause. Give the system safe names and map back at the end.
+  safe <- make.names(target, unique = TRUE)
+  colnames(Y) <- safe
 
   p <- vars::VARselect(Y, lag.max = min(12L, floor(nrow(Y) / 4)))$selection[["AIC(n)"]]
   m <- vars::VAR(Y, p = max(1L, as.integer(p)), type = "const")
@@ -173,7 +177,7 @@ fc_fit_joint <- function(d, target, engine, h, levels) {
   preds <- lapply(levels, function(l) stats::predict(m, n.ahead = h, ci = l / 100))
 
   stats::setNames(lapply(seq_along(target), function(i) {
-    k <- target[[i]]
+    k <- safe[[i]]
     y <- ys[[i]]
     first <- preds[[1L]]$fcst[[k]]
     mean <- fc_as_ts(first[, "fcst"], y)

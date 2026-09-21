@@ -46,6 +46,10 @@ the band is gone, silently, with the lines still drawn.
 \code{"accuracy"} is the one output that is not a series. It is one row per
 target, sorted worst first, because the reason to ask for it is to find
 which series need a hand.
+
+The rest: \code{"fitted"} is in-sample, one value per observed period,
+\code{"residuals"} is observed minus fitted, and \code{"components"} is the level,
+trend and season paths, which ETS has and the other engines do not.
 }
 \examples{
 new_ts_forecast_series_block(what = "accuracy")

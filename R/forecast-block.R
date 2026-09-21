@@ -32,7 +32,14 @@
 #' for you: a fitted regression cannot predict without values of its
 #' regressors over the horizon. `"lag"` shifts them so the values needed were
 #' observed; `"hold"` carries the last one forward and the resulting interval
-#' treats that guess as an observation, which is why it is not the default.
+#' TREATS THAT GUESS AS AN OBSERVATION, so it is narrower than the truth.
+#' That is why `"lag"` is the default, and why "from a second input", which
+#' is the honest third answer, is the one worth building next.
+#'
+#' The engines: `"ets"` is exponential smoothing with the state chosen by
+#' AICc, `"arima"` is `auto.arima()` and the only one here that takes
+#' regressors, `"theta"` is univariate and hard to beat, and `"var"` is the
+#' joint one.
 #'
 #' @param target Series to forecast. Empty means all of them.
 #' @param engine One of `"ets"`, `"arima"`, `"theta"` or `"var"`.
@@ -144,8 +151,12 @@ new_ts_forecast_block <- function(target = character(), engine = "ets",
       )
     },
     function(id) {
-      ts_gear(shiny::NS(id), fc_css(),
-              shiny::uiOutput(shiny::NS(id, "form")), open = TRUE)
+      shiny::tagList(
+        blockr.dplyr::blockr_core_js_dep(),
+        blockr.dplyr::blockr_select_dep(),
+        ts_gear(shiny::NS(id), fc_css(),
+                shiny::uiOutput(shiny::NS(id, "form")), open = TRUE)
+      )
     },
     dat_val = function(data) ts_validate_series(data),
     # An empty target is the starting state and means every series; empty
@@ -195,18 +206,19 @@ fc_form <- function(ns, ids, engine, cur) {
 
   htmltools::tagList(
     ts_fields(
-      fc_select_multi(ns("target"), "Target", ids, cur$target,
+      ts_select_multi(ns("target"), "Target", ids, cur$target,
                       empty = "every series"),
       ts_select(ns("engine"), "Engine",
                 stats::setNames(names(labels), unname(labels)), engine),
       fc_number(ns("h"), "Horizon", cur$h, min = 1)
     ),
     ts_fields(
-      fc_select_multi(ns("levels"), "Intervals",
+      ts_select_multi(ns("levels"), "Intervals",
                       c("50", "80", "90", "95", "99"),
-                      as.character(cur$levels), empty = "none"),
+                      as.character(cur$levels), empty = "none",
+                      class = "blockr-ts-field--narrow"),
       if (spec$xreg) {
-        fc_select_multi(ns("xreg"), "Regressors", setdiff(ids, cur$target),
+        ts_select_multi(ns("xreg"), "Regressors", setdiff(ids, cur$target),
                         cur$xreg, empty = "none")
       },
       if (spec$xreg && length(cur$xreg)) {
@@ -219,43 +231,64 @@ fc_form <- function(ns, ids, engine, cur) {
         fc_number(ns("lag"), "Lag",
                   if (length(cur$lag)) cur$lag else cur$h, min = 1)
       }
-    ),
-    ts_hint(
-      spec$hint,
-      if (spec$joint) {
-        " The targets are fitted as one system, so picking a second one changes the model."
-      } else {
-        " Several targets are fitted one at a time."
-      },
-      if (spec$xreg && length(cur$xreg) && identical(cur$xreg_mode, "hold")) {
-        htmltools::span(
-          class = "blockr-ts-fc-warn",
-          " Holding a regressor treats a guess as an observation: the interval is narrower than the truth."
-        )
-      }
     )
   )
 }
 
-#' A native multiple select
+#' A multi-select, the design-system one
 #'
-#' `selectize = FALSE` throughout this package, so this is the browser's own
-#' list box with the package's styling on it rather than a component from
-#' somewhere else. The empty state says what empty MEANS, because "nothing
-#' selected" and "every series" look identical otherwise.
+#' `Blockr.Select.multi` from blockr.dplyr, not a native `<select multiple>`.
+#' The list box the first version used is the browser's own control: it cannot
+#' be sized to the row it sits in, it shows a scrolling window rather than
+#' what is chosen, and it does not read as anything else in a blockr board.
+#' Single selects stay native here, because `ts_select()` already styles one
+#' into the 42px bordered control and a native `<select>` collapsed to one
+#' line is the same shape as the component.
 #'
+#' THE OPTIONS ARE BAKED INTO THE MOUNT, not pushed over a custom message.
+#' They only change when the data or the engine changes, and those are exactly
+#' what re-render this form, so the options arrive with the markup that shows
+#' them. That removes the push entirely, and with it the handshake where a
+#' block mounting on a deferred panel gets its options before its container
+#' exists.
+#'
+#' Nothing is ever read back OUT of the widget: the block owns the value, the
+#' widget reports changes, and `setOptions()` is never called, so there is no
+#' path by which an option list can masquerade as a user's pick.
+#'
+#' @param id Namespaced input id the pick is written to.
+#' @param label Field label.
+#' @param choices Character vector.
+#' @param selected Character vector.
+#' @param empty What an empty selection MEANS, shown as the placeholder.
+#'   The placeholder is the field's value while nothing is picked, so it says
+#'   "every series" rather than describing itself: an empty target and a
+#'   target of every series look identical otherwise.
 #' @noRd
-fc_select_multi <- function(id, label, choices, selected, empty = "none") {
+ts_select_multi <- function(id, label, choices, selected, empty = "none",
+                            class = NULL) {
+
+  cid <- paste0(id, "_cont")
+
   htmltools::div(
-    class = "blockr-ts-field blockr-ts-field--multi",
-    shiny::selectInput(
-      id, label, choices = choices, selected = selected,
-      multiple = TRUE, selectize = FALSE, width = "100%", size = 3
-    ),
-    htmltools::div(
-      class = "blockr-ts-fc-empty",
-      if (length(selected)) "" else paste("Empty:", empty)
-    )
+    class = paste("blockr-ts-field blockr-ts-field--multi", class),
+    htmltools::tags$label(class = "control-label", label),
+    htmltools::div(id = cid, class = "blockr-select--bordered"),
+    htmltools::tags$script(htmltools::HTML(sprintf(
+      "(function(){var f=function(){
+         if(!window.Blockr||!Blockr.Select||!window.Shiny){return setTimeout(f,50);}
+         var el=document.getElementById(%s); if(!el){return setTimeout(f,50);}
+         el.innerHTML='';
+         el._sel=Blockr.Select.multi(el,{options:%s,selected:%s,placeholder:%s,
+           singleLine:true,
+           onChange:function(v){Shiny.setInputValue(%s,v,{priority:'event'});}});
+       };f();})();",
+      jsonlite::toJSON(cid, auto_unbox = TRUE),
+      jsonlite::toJSON(as.character(choices)),
+      jsonlite::toJSON(as.character(selected)),
+      jsonlite::toJSON(empty, auto_unbox = TRUE),
+      jsonlite::toJSON(id, auto_unbox = TRUE)
+    )))
   )
 }
 
@@ -276,18 +309,10 @@ fc_number <- function(id, label, value, min = NA) {
 #' @noRd
 fc_css <- function() {
   htmltools::tags$style(htmltools::HTML("
-    /* A list box does not stretch. Left to grow it takes a whole row
-       to show three items, and the row it takes is the one the engine and
-       the horizon were sharing. */
-    .blockr-ts-field--multi { flex: 0 1 230px; }
-    .blockr-ts-field--multi select { min-height: 74px; }
+    .blockr-ts-field--multi { flex: 1 1 200px; }
+    /* A field that wraps onto a row of its own should not then grow to fill
+       it. Two interval chips in a full-width control read as a mistake. */
+    .blockr-ts-field--narrow { flex: 0 1 210px; }
     .blockr-ts-field--num { flex: 0 1 110px; }
-    .blockr-ts-fc-empty {
-      font-size: 11px;
-      color: #9ca3af;
-      margin-top: 2px;
-      min-height: 14px;
-    }
-    .blockr-ts-fc-warn { color: #b45309; }
   "))
 }
