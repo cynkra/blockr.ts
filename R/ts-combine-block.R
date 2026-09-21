@@ -216,7 +216,15 @@ ts_combine_expr <- function(method, refs, names, result) {
     # on them ("replacement has 0 rows"), so a named chain call would take a
     # working board down. The other methods reduce to one series anyway, and
     # that one is named by ts_name() below.
-    if (isTRUE(spec$named)) args <- stats::setNames(args, names)
+    # AN EMPTY NAME REINTRODUCES THE DEPARSE. `ts_c(x, b = y)` names the
+    # first series by deparsing it, so a slot whose text field was cleared
+    # comes back as `.arg1` -- the exact failure this block exists to stop.
+    if (isTRUE(spec$named)) {
+      names <- as.character(names)
+      blank <- !nzchar(names) | is.na(names)
+      names[blank] <- paste0("series", seq_along(names))[blank]
+      args <- stats::setNames(args, names)
+    }
     out <- as.call(c(list(str2lang(spec$fn)), args))
   }
 

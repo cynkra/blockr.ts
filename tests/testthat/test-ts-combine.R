@@ -48,3 +48,20 @@ test_that("dot refs are VALUES; the names are the link names", {
 test_that("no inputs yields a call, not an error", {
   expect_true(is.call(ts_combine_expr("c", character(), character(), "")))
 })
+
+test_that("a cleared slot name does not fall back to the deparse", {
+  # `ts_c(x, b = y)` names the first series by deparsing it, which is the
+  # whole failure this block exists to stop.
+  e <- ts_combine_expr("c", c(".arg1", ".arg2"), c("", "Female"), "")
+  expect_identical(names(as.list(e))[-1L], c("series1", "Female"))
+})
+
+test_that("an id that is not a syntactic R name still works as one", {
+  # tsbox ids are labels, not names: anything can be in one. The same class
+  # of bug bit the forecast block, where VAR equations go through
+  # make.names() and a non-syntactic id then looks up as NULL.
+  for (id in c("Retail `trade`", "Sales · NSA", "if", "2024", "a\nb")) {
+    e <- ts_combine_expr("c", c(".arg1", ".arg2"), c(id, "b"), "")
+    expect_identical(names(as.list(e))[[2L]], id)
+  }
+})
