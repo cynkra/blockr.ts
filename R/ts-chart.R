@@ -137,6 +137,31 @@ ts_resolve.default <- function(x) {
   )
 }
 
+#' The id columns that identify anything
+#'
+#' AN ID COLUMN WITH ONE VALUE IN IT IDENTIFIES NOTHING. An API that takes its
+#' query as dimensions returns a column per dimension whether or not the query
+#' pinned it, so `type=real;seas_adj=na` comes back with `type` and `seas_adj`
+#' present and constant. Pasting them into the label gives every series a name
+#' like `real \u00b7 manu \u00b7 na`, two thirds of which is the question
+#' rather than the answer, and the only way out was a select block upstream
+#' whose entire job was deleting them.
+#'
+#' All constant is the single-series case, and that keeps its name: a series
+#' called `real \u00b7 gdp \u00b7 na` is over-described, one called nothing
+#' is worse.
+#'
+#' @param d A long frame.
+#' @param ids Candidate id columns.
+#' @noRd
+ts_varying <- function(d, ids) {
+  if (length(ids) < 2L) {
+    return(ids)
+  }
+  keep <- ids[vapply(d[ids], function(x) length(unique(x)) > 1L, logical(1))]
+  if (length(keep)) keep else ids[[length(ids)]]
+}
+
 #' The one column of a kind, by name first and type second
 #'
 #' tsbox goes on column names before anything else, so `name` wins when it is
@@ -203,6 +228,8 @@ ts_frame <- function(x) {
                  logical(1)))) {
     return(NULL)
   }
+
+  idcols <- ts_varying(d, idcols)
 
   id <- if (length(idcols)) {
     do.call(paste, c(unname(lapply(d[idcols], as.character)), sep = " \u00b7 "))

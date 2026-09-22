@@ -42,8 +42,21 @@ test_that("ts_resolve is the seam, and NULL means 'not a series'", {
   expect_false(is.null(ts_frame(fake)))
 })
 
-test_that("several id columns become one label", {
-  d <- transform(ap(), region = "north", channel = "web")
+test_that("several id columns become one label, pinned ones excluded", {
+  x <- ap()
+  d <- rbind(
+    transform(x, region = "north", channel = "web"),
+    transform(x, region = "south", channel = "web")
+  )
   f <- ts_frame(d[c("region", "channel", "time", "value")])
-  expect_identical(unique(f$id), "north · web")
+  # `channel` is the same everywhere, so it says nothing about which series
+  # this is; `region` is what distinguishes them.
+  expect_setequal(unique(f$id), c("north", "south"))
+
+  d2 <- rbind(
+    transform(x, region = "north", channel = "web"),
+    transform(x, region = "north", channel = "shop")
+  )
+  f2 <- ts_frame(d2[c("region", "channel", "time", "value")])
+  expect_setequal(unique(f2$id), c("web", "shop"))
 })

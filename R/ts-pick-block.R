@@ -85,7 +85,7 @@ new_ts_pick_block <- function(series = character(), ...) {
                 # column.
                 return(quote(base::identity(data)))
               }
-              ts_pick_expr(keep, ts_id_cols(data()))
+              ts_pick_expr(keep, ts_layout(data()))
             }),
             state = list(series = r_series)
           )
@@ -104,52 +104,60 @@ new_ts_pick_block <- function(series = character(), ...) {
   )
 }
 
-#' The id columns of a frame, in order
-#'
-#' Everything that is not the time column or the value column.
+#' How a frame is laid out: which columns are ids, time and value
 #' @noRd
-ts_id_cols <- function(data) {
+ts_layout <- function(data) {
   d <- tryCatch(suppressMessages(tsbox::ts_tbl(data)),
                 error = function(e) NULL, warning = function(w) NULL)
   if (is.null(d) || !nrow(d)) {
-    return(character())
+    return(NULL)
   }
   nm <- names(d)
   vcol <- nm[[length(nm)]]
   tcol <- if ("time" %in% nm) "time" else nm[[length(nm) - 1L]]
-  setdiff(nm, c(tcol, vcol))
+  ids <- setdiff(nm, c(tcol, vcol))
+  list(ids = ids, varying = ts_varying(d, ids), time = tcol, value = vcol)
 }
 
 #' The expression the picker writes
 #'
-#' `tsbox::ts_pick()` MATCHES AGAINST ONE ID COLUMN. A frame with several of
-#' them -- an API that returns one column per dimension, which is the normal
-#' shape -- has no single id for it to match, and the picker's own label is a
-#' composite this package pastes together for display. Handing that label to
-#' `ts_pick()` fails with "values missing in data", after a list that looked
-#' like it worked.
+#' `tsbox::ts_pick()` MATCHES AGAINST ONE ID COLUMN, and it reads the frame's
+#' columns, not our labels. A frame from an API that takes its query as
+#' dimensions has one column per dimension -- `type, structure, seas_adj` --
+#' so there is no single id to match and the label in our list is a composite,
+#' with the pinned dimensions dropped because they identify nothing. Handing
+#' that to `ts_pick()` fails with "values missing in data" after a list that
+#' had looked like it worked.
 #'
-#' So: one id column gets `ts_pick()`, which keeps the pick order and can
-#' rename. Several get a subset on the same composite the list showed, in
-#' base R, so a document exported from the board needs nothing installed to
-#' run it.
+#' So there are two forms. A frame that is already one id, one time, one value
+#' gets `ts_pick()`, which keeps the pick order and can rename. Anything else
+#' gets a subset that filters on the columns that vary AND drops the ones that
+#' do not, which is the work a select block was doing by hand. Base R, so a
+#' document exported from the board needs nothing installed to run it.
 #'
 #' @param keep Ids to keep, in pick order.
-#' @param ids The frame's id columns.
+#' @param lay Result of [ts_layout()].
 #' @noRd
-ts_pick_expr <- function(keep, ids) {
-  if (length(ids) <= 1L) {
+ts_pick_expr <- function(keep, lay) {
+  if (is.null(lay) || !length(lay$varying)) {
+    return(quote(base::identity(data)))
+  }
+  if (identical(lay$ids, lay$varying) && length(lay$ids) == 1L) {
     return(as.call(c(list(quote(tsbox::ts_pick), quote(data)),
                      as.list(keep))))
   }
-  key <- as.call(c(
-    list(quote(paste)),
-    lapply(ids, function(i) call("[[", quote(data), i)),
-    list(sep = " \u00b7 ")
-  ))
-  bquote(
-    data[.(key) %in% .(keep), , drop = FALSE]
-  )
+
+  key <- if (length(lay$varying) == 1L) {
+    call("[[", quote(data), lay$varying)
+  } else {
+    as.call(c(
+      list(quote(paste)),
+      lapply(lay$varying, function(i) call("[[", quote(data), i)),
+      list(sep = " \u00b7 ")
+    ))
+  }
+  cols <- c(lay$varying, lay$time, lay$value)
+  bquote(data[.(key) %in% .(keep), .(cols), drop = FALSE])
 }
 
 #' One row's worth of facts about each series
@@ -163,7 +171,7 @@ ts_pick_rows <- function(data) {
   nm <- names(d)
   vcol <- nm[[length(nm)]]
   tcol <- if ("time" %in% nm) "time" else nm[[length(nm) - 1L]]
-  idc <- setdiff(nm, c(tcol, vcol))
+  idc <- ts_varying(d, setdiff(nm, c(tcol, vcol)))
   if (!length(idc)) {
     return(list())
   }

@@ -71,26 +71,50 @@ test_that("the constructor's selection survives startup", {
   )
 })
 
-test_that("a frame with several id columns is still pickable", {
-  # ts_pick() matches against ONE id column. An API that returns a column per
-  # dimension has no single id, and the composite label the list shows is one
-  # this package pastes for display, so handing it to ts_pick() fails with
-  # "values missing in data" after a list that looked like it worked.
-  e <- ts_pick_expr("a · x", c("dim1", "dim2"))
+test_that("a pinned dimension identifies nothing and is dropped", {
+  # An API that takes its query as dimensions returns a column per dimension
+  # whether the query pinned it or not, so two thirds of a label like
+  # `real \u00b7 manu \u00b7 na` is the question rather than the answer. The
+  # only way out used to be a select block upstream whose whole job was
+  # deleting those columns.
   d <- data.frame(
-    dim1 = rep(c("a", "b"), each = 4L),
-    dim2 = "x",
+    type = "real",
+    dim = rep(c("a", "b"), each = 4L),
+    adj = "na",
     time = rep(seq(as.Date("2020-01-01"), by = "month", length.out = 4L), 2L),
     value = 1:8
   )
-  r <- eval(e, list(data = d))
-  expect_identical(unique(r$dim1), "a")
+  lay <- ts_layout(d)
+  expect_identical(lay$ids, c("type", "dim", "adj"))
+  expect_identical(lay$varying, "dim")
+
+  rows <- ts_pick_rows(d)
+  expect_identical(vapply(rows, `[[`, character(1L), "id"), c("a", "b"))
+
+  # The expression filters AND drops the pinned columns, which is the work
+  # the select block was doing by hand. `ts_pick()` could not: it reads the
+  # frame's columns, not our labels, and fails with "values missing in data".
+  r <- eval(ts_pick_expr("a", lay), list(data = d))
+  expect_identical(names(r), c("dim", "time", "value"))
+  expect_identical(unique(r$dim), "a")
   expect_identical(nrow(r), 4L)
 })
 
 test_that("one id column still gets ts_pick(), which keeps the order", {
+  lay <- list(ids = "id", varying = "id", time = "time", value = "value")
   expect_identical(
-    ts_pick_expr(c("b", "a"), "id"),
+    ts_pick_expr(c("b", "a"), lay),
     quote(tsbox::ts_pick(data, "b", "a"))
   )
+})
+
+test_that("a single series keeps its name when every column is pinned", {
+  d <- data.frame(
+    type = "real", dim = "gdp",
+    time = seq(as.Date("2020-01-01"), by = "month", length.out = 4L),
+    value = 1:4
+  )
+  # All constant is the single-series case: over-described beats unnamed.
+  expect_identical(ts_layout(d)$varying, "dim")
+  expect_identical(ts_pick_rows(d)[[1L]]$id, "gdp")
 })
