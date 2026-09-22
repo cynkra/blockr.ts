@@ -7,9 +7,10 @@
 register_ts_blocks()
 }
 \description{
-Four entries, where there were fourteen. The split is by INPUT SHAPE, not
-by function: sixteen unary tsbox verbs are one block with a function
-picker, seven ways of combining series are another, and picking a few
-series out of many is a third because it needs a list you can read rather
-than a select you cannot.
+Six entries, where there were fourteen. The split is by INPUT SHAPE, not by
+function: sixteen unary tsbox verbs are one block with a function picker,
+seven ways of combining series are another, and picking a few series out of
+many is a third because it needs a list you can read rather than a select
+you cannot. Forecasting is two, because fitting a model and reading one are
+different shapes, the same split the seas block makes.
 }
