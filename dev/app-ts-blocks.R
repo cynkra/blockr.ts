@@ -11,7 +11,8 @@
 #               tile grid; the arguments under the grid are built from
 #               ts_summary() of whatever arrived.
 #   Combine     new_ts_combine_block(), variadic, fed two spans of the same
-#               series so Append and Chain-link have something to do.
+#               series so Append and Chain-link have something to do. Both
+#               spans arrive without an id column, so both get a name row.
 #   Pick        new_ts_pick_block() on the Census MARTS file if it has been
 #               cached (168 series), otherwise on the built-in deaths series.
 for (p in c("blockr.core", "blockr.ui", "blockr.dag", "blockr.dock",
@@ -66,7 +67,7 @@ board <- blockr.dock::new_dock_board(
       verb = "span", start = "1956-01-01", block_name = "New vintage"
     ),
     combine = blockr.ts::new_ts_combine_block(
-      method = "bind", result = "Air passengers", block_name = "Combine"
+      method = "c", block_name = "Combine"
     ),
     source = blockr.core::new_static_block(many, block_name = "Many series"),
     pick = blockr.ts::new_ts_pick_block(block_name = "Pick")

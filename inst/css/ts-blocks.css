@@ -152,26 +152,80 @@
 }
 
 /* ---- the variadic input rows ----------------------------------------- */
-.blockr-ts-slots {
+/* ---- the inputs rail -------------------------------------------------
+ * One row per variadic slot, under the tiles. Rows, not cards: naming is
+ * the errand, picking the method is the job, and the old cards spent more
+ * height on the errand. The field draws no border until it is touched, so
+ * the row reads as a name rather than as a form.
+ */
+.blockr-ts-inputs { margin-top: 16px; }
+.blockr-ts-inputs__head {
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  font-weight: var(--blockr-font-weight-medium, 500);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--blockr-grey-400, #9ca3af);
+  margin-bottom: 2px;
+}
+.blockr-ts-inputs__row {
   display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 14px;
+  align-items: center;
+  gap: 12px;
+  min-height: 32px;
+  border-bottom: 1px solid var(--blockr-grey-100, #f3f4f6);
 }
-.blockr-ts-slot {
-  flex: 1 1 220px;
-  min-width: 0;
-  border: 1px solid var(--blockr-color-border, #e5e7eb);
-  border-radius: var(--blockr-radius-lg, 8px);
-  padding: 8px 10px 10px;
+.blockr-ts-inputs__row:last-child { border-bottom: 0; }
+.blockr-ts-inputs__name { flex: 0 1 220px; min-width: 0; }
+.blockr-ts-inputs__name .form-group,
+.blockr-ts-inputs__name .shiny-input-container {
+  margin-bottom: 0;
+  width: 100% !important;
 }
-.blockr-ts-slot__ref {
+.blockr-ts-inputs__name input.form-control {
+  height: 28px;
+  padding: 0 6px;
+  margin-left: -6px;
+  width: 100%;
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  color: var(--blockr-grey-900, #111827);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--blockr-radius-md, 6px);
+  box-shadow: none;
+}
+.blockr-ts-inputs__name input.form-control:hover {
+  background: var(--blockr-grey-50, #f9fafb);
+  border-color: var(--blockr-grey-200, #e5e7eb);
+}
+.blockr-ts-inputs__name input.form-control:focus {
+  background: #fff;
+  border-color: var(--blockr-color-primary, #2563eb);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+/* An untouched slot shows its ref, and a ref is code, not a name. */
+.blockr-ts-inputs__name input.form-control::placeholder {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: var(--blockr-font-size-xs, 0.75rem);
   color: var(--blockr-grey-400, #9ca3af);
-  margin-bottom: 4px;
+  opacity: 1;
 }
-.blockr-ts-slot .blockr-ts-field { flex: 1 1 auto; }
+.blockr-ts-inputs__given {
+  flex: 0 1 220px;
+  min-width: 0;
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  color: var(--blockr-grey-900, #111827);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.blockr-ts-inputs__fact {
+  margin-left: auto;
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  color: var(--blockr-grey-400, #9ca3af);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
 /* ---- the series picker ---------------------------------------------
  * A delta on blockr.ui's table preview, not a table of our own: the base

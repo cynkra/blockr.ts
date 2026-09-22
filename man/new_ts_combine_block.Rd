@@ -4,16 +4,20 @@
 \alias{new_ts_combine_block}
 \title{Combine time series}
 \usage{
-new_ts_combine_block(method = "c", names = character(), result = "", ...)
+new_ts_combine_block(method = "c", names = character(), result = NULL, ...)
 }
 \arguments{
 \item{method}{One of \code{"c"} (side by side), \code{"bind"} (append in time),
 \code{"chain"} (chain-link), \code{"divide"}, \code{"subtract"}, \code{"multiply"} or
 \code{"add"}.}
 
-\item{names}{Series names, one per input slot.}
+\item{names}{Series names, one per input slot. Interim: these belong on
+the link (\code{link$input}), and the whole argument goes away when a link can
+be renamed in the UI.}
 
-\item{result}{Name for the result, for the methods that produce one series.}
+\item{result}{LEGACY. Was the name for the methods that produce one series.
+Accepted so old boards restore, ignored otherwise: use \code{\link[=ts_name]{ts_name()}} or a
+downstream rename instead.}
 
 \item{...}{Forwarded to \code{\link[blockr.core:new_transform_block]{blockr.core::new_transform_block()}}.}
 }
@@ -40,14 +44,20 @@ this block supplies one. Each input slot gets a name, defaulted from the
 series already in that input and editable, and the expression is written
 with those names.
 
-The four methods that reduce to a single series have the opposite problem:
-the result has no \code{id} at all and tsbox calls it \code{value}. They get a
-"Name the result" field and the expression is wrapped in \code{\link[=ts_name]{ts_name()}}.
+\strong{A slot whose frame already carries an \code{id} column needs no name}, and
+will not take one: \code{ts_c(P = x, Q = y)} with a two-id \code{x} returns \code{a | b | Q}, so the ids win and \code{P} is dropped silently. That holds for one id as
+well as for many, which is why the row appears only where
+\code{length(ts_facts(x)$ids) == 0}.
+
+The six methods that reduce to a single series get no naming UI at all.
+Their result has no \code{id} and tsbox calls it \code{value}; naming it here would
+be a rename dressed as a combine, and tsbox cannot name a single series
+anyway (see \code{\link[=ts_name]{ts_name()}}, which is what such a rename needs).
 
 The arithmetic operators take exactly two inputs and error usefully when
 the id structures differ, so there is nothing for this block to check.
 }
 \examples{
-new_ts_combine_block(method = "chain", result = "Chained index")
+new_ts_combine_block(method = "chain")
 
 }

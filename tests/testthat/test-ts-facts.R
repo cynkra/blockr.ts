@@ -29,3 +29,31 @@ test_that("a stored value that is no longer on offer falls back", {
   # A board saved against another series can leave no choices at all.
   expect_null(ts_one_of("z", character()))
 })
+
+test_that("the facts line says whether the frame names itself", {
+  two <- tsbox::ts_tbl(tsbox::ts_c(a = datasets::AirPassengers,
+                                   b = datasets::AirPassengers))
+  one <- tsbox::ts_tbl(tsbox::ts_df(datasets::AirPassengers))
+
+  expect_match(ts_facts_line(ts_facts(two)), "^a, b · monthly · 1949")
+  expect_match(ts_facts_line(ts_facts(one)), "^no id column · monthly")
+  expect_identical(ts_facts_line(ts_facts(NULL)), "no series")
+})
+
+test_that("more than two ids are counted, not listed", {
+  many <- tsbox::ts_tbl(
+    tsbox::ts_c(a = datasets::AirPassengers, b = datasets::AirPassengers,
+                c = datasets::AirPassengers)
+  )
+  expect_match(ts_facts_line(ts_facts(many)), "^a, b \\+1 ")
+})
+
+test_that("a row that shows the ids does not repeat them on the right", {
+  two <- tsbox::ts_tbl(tsbox::ts_c(a = datasets::AirPassengers,
+                                   b = datasets::AirPassengers))
+  f <- ts_facts(two)
+  expect_identical(ts_ids_label(f), "a, b")
+  expect_false(grepl("a, b", ts_facts_line(f, ids = FALSE)))
+  expect_match(ts_facts_line(f, ids = FALSE), "^monthly")
+  expect_identical(ts_ids_label(ts_facts(NULL)), "no id column")
+})

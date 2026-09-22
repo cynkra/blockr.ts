@@ -184,3 +184,57 @@ ts_text <- function(id, label, value, placeholder = NULL) {
 ts_hint <- function(...) {
   htmltools::div(class = "blockr-ts-hint", ...)
 }
+
+#' The inputs rail
+#'
+#' One row per variadic slot, below the method tiles because the method is
+#' what decides whether the rows exist at all. A row is a name and, in grey
+#' on the right, what the data says about that slot.
+#'
+#' Only a slot whose frame has no `id` column gets a field: tsbox keeps an
+#' existing id and drops the argument name, so a field there would be a
+#' control that does nothing. Those rows show the ids instead.
+#'
+#' The field is a plain `textInput` that draws no border until you touch it,
+#' which is the design-system input with its chrome held back rather than a
+#' click-to-edit widget of our own. An untouched slot holds NO VALUE and
+#' shows its ref as the placeholder: the ref is what the expression falls
+#' back to, so the field says what will happen rather than pre-filling a
+#' string the user then has to delete. It also keeps the panel from having to
+#' re-render to restyle itself while someone is typing in it.
+#'
+#' @param ns Namespace function.
+#' @param values One value per slot: the name typed so far, or the ids for a
+#'   slot that names itself.
+#' @param refs One ref per slot, shown as the placeholder.
+#' @param nameable Which slots may be named.
+#' @param facts One line per slot, from [ts_facts_line()].
+#' @noRd
+ts_inputs_rail <- function(ns, values, refs, nameable, facts) {
+
+  if (!length(values)) {
+    return(NULL)
+  }
+
+  htmltools::div(
+    class = "blockr-ts-inputs",
+    htmltools::div(class = "blockr-ts-inputs__head", "Inputs"),
+    lapply(seq_along(values), function(i) {
+      htmltools::div(
+        class = "blockr-ts-inputs__row",
+        if (isTRUE(nameable[[i]])) {
+          htmltools::div(
+            class = "blockr-ts-inputs__name",
+            shiny::textInput(
+              ns(paste0("name_", i)), NULL, value = values[[i]],
+              width = "100%", placeholder = refs[[i]]
+            )
+          )
+        } else {
+          htmltools::div(class = "blockr-ts-inputs__given", values[[i]])
+        },
+        htmltools::div(class = "blockr-ts-inputs__fact", facts[[i]])
+      )
+    })
+  )
+}

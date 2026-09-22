@@ -22,9 +22,16 @@
 #' series already in that input and editable, and the expression is written
 #' with those names.
 #'
-#' The four methods that reduce to a single series have the opposite problem:
-#' the result has no `id` at all and tsbox calls it `value`. They get a
-#' "Name the result" field and the expression is wrapped in [ts_name()].
+#' **A slot whose frame already carries an `id` column needs no name**, and
+#' will not take one: `ts_c(P = x, Q = y)` with a two-id `x` returns `a | b |
+#' Q`, so the ids win and `P` is dropped silently. That holds for one id as
+#' well as for many, which is why the row appears only where
+#' `length(ts_facts(x)$ids) == 0`.
+#'
+#' The six methods that reduce to a single series get no naming UI at all.
+#' Their result has no `id` and tsbox calls it `value`; naming it here would
+#' be a rename dressed as a combine, and tsbox cannot name a single series
+#' anyway (see [ts_name()], which is what such a rename needs).
 #'
 #' The arithmetic operators take exactly two inputs and error usefully when
 #' the id structures differ, so there is nothing for this block to check.
@@ -32,18 +39,27 @@
 #' @param method One of `"c"` (side by side), `"bind"` (append in time),
 #'   `"chain"` (chain-link), `"divide"`, `"subtract"`, `"multiply"` or
 #'   `"add"`.
-#' @param names Series names, one per input slot.
-#' @param result Name for the result, for the methods that produce one series.
+#' @param names Series names, one per input slot. Interim: these belong on
+#'   the link (`link$input`), and the whole argument goes away when a link can
+#'   be renamed in the UI.
+#' @param result LEGACY. Was the name for the methods that produce one series.
+#'   Accepted so old boards restore, ignored otherwise: use [ts_name()] or a
+#'   downstream rename instead.
 #' @param ... Forwarded to [blockr.core::new_transform_block()].
 #'
 #' @examples
-#' new_ts_combine_block(method = "chain", result = "Chained index")
+#' new_ts_combine_block(method = "chain")
 #'
 #' @export
 new_ts_combine_block <- function(method = "c", names = character(),
-                                 result = "", ...) {
+                                 result = NULL, ...) {
 
   method <- match.arg(method, base::names(ts_methods()))
+
+  # LEGACY, mapped in one place: the block no longer names its result, but
+  # core requires one state entry per formal and old boards saved this one.
+  # Quiet on purpose -- no deprecation warning until there is a policy.
+  result <- if (is.null(result)) "" else as.character(result)
 
   blockr.core::new_transform_block(
     function(id, ...args) {
@@ -53,21 +69,43 @@ new_ts_combine_block <- function(method = "c", names = character(),
 
           r_method <- shiny::reactiveVal(method)
           r_names <- shiny::reactiveVal(as.character(names))
-          r_result <- shiny::reactiveVal(as.character(result))
+          # Held, never read: see the LEGACY note on the formal.
+          r_result <- shiny::reactiveVal(result)
 
           refs <- shiny::reactive(ts_dot_refs(...args))
 
-          # A slot's default name is the series already inside it. The block
-          # cannot see what the upstream block is called -- blocks get data,
-          # not board state -- so the data is the only honest default.
+          facts <- shiny::reactive(
+            lapply(seq_along(refs()), function(i) {
+              ts_facts(ts_arg_value(...args, i))
+            })
+          )
+
+          # THE FRAME WINS. tsbox keeps an existing `id` column and drops the
+          # argument name, so a slot that already holds named series has
+          # nothing to name and must not offer a field that does nothing.
+          nameable <- shiny::reactive(
+            vapply(facts(), function(f) !length(f$ids), logical(1L))
+          )
+
+          # A slot's default name is what the slot is already called, which
+          # is `.arg1` until a link is named. The block cannot see what the
+          # upstream block is called -- blocks get data, not board state --
+          # and once `link$input` carries a name, the ref IS that name and
+          # this default becomes the right answer with nothing typed.
           slot_names <- shiny::reactive({
             held <- r_names()
-            vapply(seq_along(refs()), function(i) {
-              if (length(held) >= i && nzchar(held[[i]])) return(held[[i]])
-              ids <- ts_facts(ts_arg_value(...args, i))$ids
-              if (length(ids) == 1L) ids else paste0("series", i)
+            rf <- unname(refs())
+            vapply(seq_along(rf), function(i) {
+              if (length(held) >= i && nzchar(held[[i]])) held[[i]] else rf[[i]]
             }, character(1L))
           })
+
+          # What the expression may name: the others go in positionally, and
+          # an unnamed slot is only safe BECAUSE it has ids -- an unnamed
+          # id-less frame is the deparse this block exists to stop.
+          expr_names <- shiny::reactive(
+            replace(slot_names(), !nameable(), NA_character_)
+          )
 
           shiny::observeEvent(input$method_pick, {
             if (input$method_pick %in% base::names(ts_methods())) {
@@ -92,25 +130,26 @@ new_ts_combine_block <- function(method = "c", names = character(),
           # rebuilds the text field you are typing in.
           output$slots <- shiny::renderUI({
             spec <- ts_methods()[[r_method()]]
-            nms <- shiny::isolate(slot_names())
-            n <- length(refs())
-            htmltools::tagList(
-              if (isTRUE(spec$named)) htmltools::div(
-                class = "blockr-ts-slots",
-                lapply(seq_len(n), function(i) {
-                  htmltools::div(
-                    class = "blockr-ts-slot",
-                    htmltools::div(class = "blockr-ts-slot__ref",
-                                   unname(refs())[[i]]),
-                    ts_text(session$ns(paste0("name_", i)), "Series name",
-                            nms[[i]])
-                  )
-                })
-              ),
-              if (spec$one) ts_fields(
-                ts_text(session$ns("result"), "Name the result",
-                        shiny::isolate(r_result()), placeholder = "value")
-              )
+            if (!isTRUE(spec$named)) {
+              return(NULL)
+            }
+            can <- nameable()
+            rf <- unname(refs())
+            held <- shiny::isolate(r_names())
+            ts_inputs_rail(
+              session$ns,
+              # A slot that names itself shows those names; the field is for
+              # the other kind, and it stays EMPTY until someone types, with
+              # the ref as its placeholder.
+              vapply(seq_along(can), function(i) {
+                if (!can[[i]]) return(ts_ids_label(facts()[[i]]))
+                if (length(held) >= i) held[[i]] else ""
+              }, character(1L)),
+              rf,
+              can,
+              vapply(seq_along(can), function(i) {
+                ts_facts_line(facts()[[i]], ids = can[[i]])
+              }, character(1L))
             )
           })
 
@@ -129,19 +168,15 @@ new_ts_combine_block <- function(method = "c", names = character(),
             if (!identical(keep, r_names())) r_names(keep)
           })
 
-          shiny::observeEvent(input$result, r_result(input$result))
-
           list(
             expr = shiny::reactive(
               # The VALUES are the references (`.arg1`); the NAMES are the
               # link names, which are empty for a positional link and blow up
               # `as.name()`.
-              ts_combine_expr(r_method(), unname(refs()), slot_names(),
-                              r_result())
+              ts_combine_expr(r_method(), unname(refs()), expr_names())
             ),
-            state = list(
-              method = r_method, names = r_names, result = r_result
-            )
+            state = list(method = r_method, names = r_names,
+                         result = r_result)
           )
         }
       )
@@ -155,8 +190,9 @@ new_ts_combine_block <- function(method = "c", names = character(),
       )
     },
     expr_type = "bquoted",
-    # Both are empty until someone types: the slot names default from the
-    # data and the result name is optional. Unlisted empties wedge the block.
+    # Empty until someone types: the slot names default from the refs, and
+    # the legacy result name is empty on every board written from now on.
+    # Unlisted empties wedge the block.
     allow_empty_state = c("names", "result"),
     class = "ts_combine_block",
     ...
@@ -181,8 +217,11 @@ ts_methods <- function() {
 }
 
 #' The expression one method writes
+#'
+#' `names` carries one entry per slot: a string to name that argument with,
+#' or `NA` for a slot the frame already names, which goes in positionally.
 #' @noRd
-ts_combine_expr <- function(method, refs, names, result) {
+ts_combine_expr <- function(method, refs, names) {
   spec <- ts_methods()[[method]]
   args <- lapply(refs, function(r) call(".", as.name(r)))
 
@@ -199,23 +238,23 @@ ts_combine_expr <- function(method, refs, names, result) {
   } else {
     # ONLY ts_c() TAKES NAMES. ts_bind() ignores them, and ts_chain() ERRORS
     # on them ("replacement has 0 rows"), so a named chain call would take a
-    # working board down. The other methods reduce to one series anyway, and
-    # that one is named by ts_name() below.
+    # working board down. The other methods reduce to one series, which tsbox
+    # calls `value`; naming that is a rename, see ts_name().
     # AN EMPTY NAME REINTRODUCES THE DEPARSE. `ts_c(x, b = y)` names the
     # first series by deparsing it, so a slot whose text field was cleared
-    # comes back as `.arg1` -- the exact failure this block exists to stop.
+    # falls back to its ref rather than to nothing. `NA` is the other case
+    # entirely: the frame carries ids, tsbox would drop the name anyway, and
+    # the argument goes in positionally.
     if (isTRUE(spec$named)) {
-      names <- as.character(names)
-      blank <- !nzchar(names) | is.na(names)
-      names[blank] <- paste0("series", seq_along(names))[blank]
-      args <- stats::setNames(args, names)
+      nms <- rep_len(as.character(names), length(args))
+      blank <- !nzchar(nms) & !is.na(nms)
+      nms[blank] <- as.character(refs)[blank]
+      nms[is.na(nms)] <- ""
+      args <- stats::setNames(args, nms)
     }
     out <- as.call(c(list(str2lang(spec$fn)), args))
   }
 
-  if (isTRUE(spec$one) && length(result) && nzchar(result)) {
-    out <- bquote(blockr.ts::ts_name(.(out), .(result)))
-  }
   out
 }
 
@@ -238,7 +277,13 @@ ts_dot_refs <- function(args) {
 }
 
 #' The value in one variadic slot, or NULL
+#'
+#' NOT `args[[i]]()`. A `reactives` store holds each slot as an ACTIVE
+#' BINDING, so `[[` already calls the reactive and hands back the data;
+#' calling the result tries to call a data frame, which throws, and a
+#' tryCatch around it turns the whole thing into a silent NULL. That is what
+#' made every slot look like "no series" here.
 #' @noRd
 ts_arg_value <- function(args, i) {
-  tryCatch(args[[i]](), error = function(e) NULL)
+  tryCatch(args[[i]], error = function(e) NULL)
 }
