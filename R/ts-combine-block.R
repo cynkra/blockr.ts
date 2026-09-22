@@ -80,18 +80,22 @@ new_ts_combine_block <- function(method = "c", names = character(),
             })
           )
 
-          # THE ID COLUMNS HAVE TO BE CALLED THE SAME THING. tsbox compares
-          # them by NAME, so two frames that are both perfectly good single
-          # series -- one carrying `id` from a model extractor, one carrying
-          # `seas_adj` from the file it was read out of -- refuse to combine
-          # with "[id] columns are not identical". Nothing about that is the
-          # user's problem, and the fix is not a rename block: this is the
-          # block whose job is putting frames from different places side by
-          # side.
+          # THE ID COLUMNS HAVE TO MATCH, AND tsbox COMPARES THEM BY NAME.
+          # Two frames that are both perfectly good single series refuse to
+          # combine when they disagree about that: one carrying `id` out of a
+          # model extractor beside one carrying `seas_adj` out of the file it
+          # was read from, or -- the commoner case -- one that has an id
+          # column beside one that has none at all. Both fail with "[id]
+          # columns are not identical", which is true and unhelpful: neither
+          # frame is wrong, and neither is the user's to fix. A rename block
+          # to fix it is the plumbing this block exists to avoid.
           #
-          # Only when every slot has exactly ONE id column, which is the case
-          # this can fix without guessing which of several lines up with
-          # which.
+          # Every slot with at most ONE id column can be brought to the same
+          # shape. A frame that has one gets it renamed; a frame that has
+          # none gets the slot's name as its id, which is what the name was
+          # for. With several id columns per frame there is no way to tell
+          # which lines up with which without guessing, and tsbox's own error
+          # says more than a wrong guess would.
           id_cols <- shiny::reactive(
             lapply(seq_along(refs()), function(i) {
               ts_layout(ts_arg_value(...args, i))$ids
@@ -100,9 +104,21 @@ new_ts_combine_block <- function(method = "c", names = character(),
 
           normalise <- shiny::reactive({
             ids <- id_cols()
-            length(ids) > 1L &&
-              all(lengths(ids) == 1L) &&
-              length(unique(unlist(ids))) > 1L
+            if (length(ids) < 2L || !all(lengths(ids) <= 1L)) {
+              return(logical())
+            }
+            # Two shapes already agree and are left alone. Every slot has
+            # an id column under the same name, which tsbox is happy with.
+            # Or NO slot has one, which is the case the argument names were
+            # written for: `ts_c(a = x, b = y)` names both.
+            n <- lengths(ids)
+            if (all(n == 0L)) {
+              return(logical())
+            }
+            if (all(n == 1L) && length(unique(unlist(ids))) == 1L) {
+              return(logical())
+            }
+            n == 1L
           })
 
           # THE FRAME WINS. tsbox keeps an existing `id` column and drops the
@@ -247,17 +263,30 @@ ts_methods <- function() {
 #' `names` carries one entry per slot: a string to name that argument with,
 #' or `NA` for a slot the frame already names, which goes in positionally.
 #' @noRd
-ts_combine_expr <- function(method, refs, names, normalise = FALSE) {
+ts_combine_expr <- function(method, refs, names, normalise = logical()) {
   spec <- ts_methods()[[method]]
   args <- lapply(refs, function(r) call(".", as.name(r)))
 
-  # See `id_cols()` in the server: tsbox matches id columns by name, so
-  # frames from two different sources have to agree on one before they can be
-  # combined at all.
-  if (isTRUE(normalise)) {
-    args <- lapply(args, function(a) {
-      bquote(stats::setNames(.(a), c("id", "time", "value")))
-    })
+  # See `id_cols()` in the server. `normalise` is one entry per slot, TRUE
+  # where the frame has an id column to rename and FALSE where it has none
+  # and needs one made; empty means the slots already agree.
+  if (length(normalise)) {
+    has_id <- rep_len(normalise, length(args))
+    nms <- rep_len(as.character(names), length(args))
+    nms[!nzchar(nms) | is.na(nms)] <- as.character(refs)[!nzchar(nms) | is.na(nms)]
+    args <- Map(
+      function(a, id, nm) {
+        if (id) {
+          bquote(stats::setNames(.(a), c("id", "time", "value")))
+        } else {
+          bquote(blockr.ts::ts_name(.(a), .(nm)))
+        }
+      },
+      args, has_id, nms
+    )
+    # Every slot now carries its own id, so an argument name would only be
+    # dropped. They go in positionally.
+    names <- rep(NA_character_, length(args))
   }
 
   if (isTRUE(spec$binary)) {

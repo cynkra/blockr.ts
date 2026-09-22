@@ -80,6 +80,43 @@ test_that("an id that is not a syntactic R name still works as one", {
   }
 })
 
+test_that("a frame with an id combines with one that has none", {
+  # The reported case: `final` out of a model extractor beside a frame with
+  # no id column at all. Both are single series, both are fine, and tsbox
+  # refuses them with "[id] columns are not identical" -- which stays on the
+  # card, because every method fails the same way and nothing clears it.
+  e <- ts_combine_expr("c", c(".arg1", ".arg2"), c(NA, "asdf"),
+                       normalise = c(TRUE, FALSE))
+  txt <- paste(deparse(e), collapse = " ")
+  expect_match(txt, "stats::setNames", fixed = TRUE)
+  expect_match(txt, 'blockr.ts::ts_name(.(.arg2), "asdf")', fixed = TRUE)
+
+  # tsbox can promote an id-less frame to sit beside a column called `id`,
+  # but not beside one called anything else -- which is the shape that
+  # actually reaches this block, an extractor's `id` on one side and a file's
+  # own dimension name on the other.
+  a <- suppressMessages(tsbox::ts_tbl(datasets::mdeaths))
+  a$seas_adj <- "csa"
+  a <- a[c("seas_adj", "time", "value")]
+  b <- suppressMessages(tsbox::ts_tbl(datasets::fdeaths))
+  expect_error(suppressMessages(tsbox::ts_c(a, asdf = b)), "not identical")
+
+  r <- suppressMessages(tsbox::ts_c(
+    stats::setNames(a, c("id", "time", "value")),
+    ts_name(b, "asdf")
+  ))
+  expect_setequal(unique(r$id), c("csa", "asdf"))
+})
+
+test_that("shapes that already agree are left alone", {
+  # Every slot carrying an id under the same name is what tsbox wants, and
+  # NO slot carrying one is what the argument names were written for.
+  expect_identical(
+    ts_combine_expr("c", c(".arg1", ".arg2"), c("a", "b")),
+    quote(tsbox::ts_c(a = .(.arg1), b = .(.arg2)))
+  )
+})
+
 test_that("id columns from different sources are renamed to match", {
   # tsbox compares id columns BY NAME, so two perfectly good single series --
   # one carrying `id` from a model extractor, one carrying `seas_adj` from the
