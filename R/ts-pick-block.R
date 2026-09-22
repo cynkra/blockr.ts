@@ -85,8 +85,7 @@ new_ts_pick_block <- function(series = character(), ...) {
                 # column.
                 return(quote(base::identity(data)))
               }
-              as.call(c(list(quote(tsbox::ts_pick), quote(data)),
-                        as.list(keep)))
+              ts_pick_expr(keep, ts_id_cols(data()))
             }),
             state = list(series = r_series)
           )
@@ -102,6 +101,54 @@ new_ts_pick_block <- function(series = character(), ...) {
     allow_empty_state = "series",
     class = "ts_pick_block",
     ...
+  )
+}
+
+#' The id columns of a frame, in order
+#'
+#' Everything that is not the time column or the value column.
+#' @noRd
+ts_id_cols <- function(data) {
+  d <- tryCatch(suppressMessages(tsbox::ts_tbl(data)),
+                error = function(e) NULL, warning = function(w) NULL)
+  if (is.null(d) || !nrow(d)) {
+    return(character())
+  }
+  nm <- names(d)
+  vcol <- nm[[length(nm)]]
+  tcol <- if ("time" %in% nm) "time" else nm[[length(nm) - 1L]]
+  setdiff(nm, c(tcol, vcol))
+}
+
+#' The expression the picker writes
+#'
+#' `tsbox::ts_pick()` MATCHES AGAINST ONE ID COLUMN. A frame with several of
+#' them -- an API that returns one column per dimension, which is the normal
+#' shape -- has no single id for it to match, and the picker's own label is a
+#' composite this package pastes together for display. Handing that label to
+#' `ts_pick()` fails with "values missing in data", after a list that looked
+#' like it worked.
+#'
+#' So: one id column gets `ts_pick()`, which keeps the pick order and can
+#' rename. Several get a subset on the same composite the list showed, in
+#' base R, so a document exported from the board needs nothing installed to
+#' run it.
+#'
+#' @param keep Ids to keep, in pick order.
+#' @param ids The frame's id columns.
+#' @noRd
+ts_pick_expr <- function(keep, ids) {
+  if (length(ids) <= 1L) {
+    return(as.call(c(list(quote(tsbox::ts_pick), quote(data)),
+                     as.list(keep))))
+  }
+  key <- as.call(c(
+    list(quote(paste)),
+    lapply(ids, function(i) call("[[", quote(data), i)),
+    list(sep = " \u00b7 ")
+  ))
+  bquote(
+    data[.(key) %in% .(keep), , drop = FALSE]
   )
 }
 

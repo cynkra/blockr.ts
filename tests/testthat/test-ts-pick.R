@@ -70,3 +70,27 @@ test_that("the constructor's selection survives startup", {
     }
   )
 })
+
+test_that("a frame with several id columns is still pickable", {
+  # ts_pick() matches against ONE id column. An API that returns a column per
+  # dimension has no single id, and the composite label the list shows is one
+  # this package pastes for display, so handing it to ts_pick() fails with
+  # "values missing in data" after a list that looked like it worked.
+  e <- ts_pick_expr("a · x", c("dim1", "dim2"))
+  d <- data.frame(
+    dim1 = rep(c("a", "b"), each = 4L),
+    dim2 = "x",
+    time = rep(seq(as.Date("2020-01-01"), by = "month", length.out = 4L), 2L),
+    value = 1:8
+  )
+  r <- eval(e, list(data = d))
+  expect_identical(unique(r$dim1), "a")
+  expect_identical(nrow(r), 4L)
+})
+
+test_that("one id column still gets ts_pick(), which keeps the order", {
+  expect_identical(
+    ts_pick_expr(c("b", "a"), "id"),
+    quote(tsbox::ts_pick(data, "b", "a"))
+  )
+})
