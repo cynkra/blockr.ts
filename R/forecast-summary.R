@@ -175,3 +175,33 @@ fc_summary_css <- function() {
     }
   "))
 }
+
+#' How a fitted model reads
+#'
+#' The other side of the chart/table switch, for a result that is a model
+#' rather than a frame. [ts_resolve()] says how a class DRAWS; this says how
+#' it READS, and a class that answers both behaves on the time series display
+#' wherever it lands.
+#'
+#' The default returns `NULL`, which means "not a model, use the app's table
+#' preview". That is what keeps this additive: every existing result is
+#' unaffected.
+#'
+#' @param x A block result.
+#' @return A `shiny.tag` or `tagList` for a model, `NULL` for anything else.
+#' @export
+#' @examples
+#' ts_model_view(datasets::AirPassengers)
+ts_model_view <- function(x) {
+  UseMethod("ts_model_view")
+}
+
+#' @export
+ts_model_view.default <- function(x) {
+  NULL
+}
+
+#' @export
+ts_model_view.ts_forecast <- function(x) {
+  fc_model_view(x)
+}

@@ -161,12 +161,18 @@ tabular_output.ts_display <- function(x, result, block, session) {
 
   if (identical(ts_view(session), "table")) {
 
-    # A MODEL IS NOT A FRAME, so for a fitted forecast the other side of the
-    # switch is the MODEL OUTPUT rather than the app's table preview, which
-    # would print a list. Same shape as the seas card: the chart is the model
-    # drawn, the hamburger is the model read.
-    if (inherits(result, "ts_forecast")) {
-      return(shiny::renderUI(fc_model_view(result)))
+    # A MODEL IS NOT A FRAME, so for a fitted model the other side of the
+    # switch is the MODEL READ rather than the app's table preview, which
+    # would print a list -- and worse, die on it: `table_page()` on anything
+    # that is not a data frame returns "missing value where TRUE/FALSE
+    # needed", which is what the panel then shows.
+    #
+    # `ts_model_view()` is the seam. A package whose block returns a model
+    # says how to read it -- `ts_resolve()` says how to draw it -- and the two
+    # together are all a model needs to behave on this display.
+    view <- ts_model_view(result)
+    if (!is.null(view)) {
+      return(shiny::renderUI(view))
     }
 
     # WHATEVER THE CHART ACCEPTED, THE TABLE HAS TO ACCEPT TOO, or the switch
