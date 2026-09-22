@@ -80,6 +80,31 @@ new_ts_combine_block <- function(method = "c", names = character(),
             })
           )
 
+          # THE ID COLUMNS HAVE TO BE CALLED THE SAME THING. tsbox compares
+          # them by NAME, so two frames that are both perfectly good single
+          # series -- one carrying `id` from a model extractor, one carrying
+          # `seas_adj` from the file it was read out of -- refuse to combine
+          # with "[id] columns are not identical". Nothing about that is the
+          # user's problem, and the fix is not a rename block: this is the
+          # block whose job is putting frames from different places side by
+          # side.
+          #
+          # Only when every slot has exactly ONE id column, which is the case
+          # this can fix without guessing which of several lines up with
+          # which.
+          id_cols <- shiny::reactive(
+            lapply(seq_along(refs()), function(i) {
+              ts_layout(ts_arg_value(...args, i))$ids
+            })
+          )
+
+          normalise <- shiny::reactive({
+            ids <- id_cols()
+            length(ids) > 1L &&
+              all(lengths(ids) == 1L) &&
+              length(unique(unlist(ids))) > 1L
+          })
+
           # THE FRAME WINS. tsbox keeps an existing `id` column and drops the
           # argument name, so a slot that already holds named series has
           # nothing to name and must not offer a field that does nothing.
@@ -173,7 +198,8 @@ new_ts_combine_block <- function(method = "c", names = character(),
               # The VALUES are the references (`.arg1`); the NAMES are the
               # link names, which are empty for a positional link and blow up
               # `as.name()`.
-              ts_combine_expr(r_method(), unname(refs()), expr_names())
+              ts_combine_expr(r_method(), unname(refs()), expr_names(),
+                              normalise())
             ),
             state = list(method = r_method, names = r_names,
                          result = r_result)
@@ -221,9 +247,18 @@ ts_methods <- function() {
 #' `names` carries one entry per slot: a string to name that argument with,
 #' or `NA` for a slot the frame already names, which goes in positionally.
 #' @noRd
-ts_combine_expr <- function(method, refs, names) {
+ts_combine_expr <- function(method, refs, names, normalise = FALSE) {
   spec <- ts_methods()[[method]]
   args <- lapply(refs, function(r) call(".", as.name(r)))
+
+  # See `id_cols()` in the server: tsbox matches id columns by name, so
+  # frames from two different sources have to agree on one before they can be
+  # combined at all.
+  if (isTRUE(normalise)) {
+    args <- lapply(args, function(a) {
+      bquote(stats::setNames(.(a), c("id", "time", "value")))
+    })
+  }
 
   if (isTRUE(spec$binary)) {
     if (length(args) != 2L) {

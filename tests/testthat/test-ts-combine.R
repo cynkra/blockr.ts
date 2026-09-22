@@ -79,3 +79,36 @@ test_that("an id that is not a syntactic R name still works as one", {
     expect_identical(names(as.list(e))[[2L]], id)
   }
 })
+
+test_that("id columns from different sources are renamed to match", {
+  # tsbox compares id columns BY NAME, so two perfectly good single series --
+  # one carrying `id` from a model extractor, one carrying `seas_adj` from the
+  # file it was read out of -- refuse to combine with "[id] columns are not
+  # identical". Neither frame is wrong and neither is the user's to fix.
+  e <- ts_combine_expr("c", c(".arg1", ".arg2"), c(NA, NA), normalise = TRUE)
+  txt <- paste(deparse(e), collapse = " ")
+  expect_match(txt, "stats::setNames", fixed = TRUE)
+  expect_match(txt, 'c("id", "time", "value")', fixed = TRUE)
+
+  # Off by default: a board whose frames already agree gets the plain call.
+  expect_identical(
+    ts_combine_expr("c", c(".arg1", ".arg2"), c(NA, NA)),
+    quote(tsbox::ts_c(.(.arg1), .(.arg2)))
+  )
+})
+
+test_that("the rename actually makes tsbox combine them", {
+  a <- suppressMessages(tsbox::ts_tbl(datasets::mdeaths))
+  a$id <- "final"
+  a <- a[c("id", "time", "value")]
+  b <- suppressMessages(tsbox::ts_tbl(datasets::fdeaths))
+  b$seas_adj <- "csa"
+  b <- b[c("seas_adj", "time", "value")]
+
+  expect_error(suppressMessages(tsbox::ts_c(a, b)), "not identical")
+  r <- suppressMessages(tsbox::ts_c(
+    stats::setNames(a, c("id", "time", "value")),
+    stats::setNames(b, c("id", "time", "value"))
+  ))
+  expect_setequal(unique(r$id), c("final", "csa"))
+})
