@@ -139,6 +139,9 @@ new_ts_transform_block <- function(verb = "pcy", base = character(),
       )
     },
     dat_val = function(data) ts_validate_series(data),
+    # See `ts_verb_expr()`: the expression carries `.(data)`, which core
+    # replaces with the upstream block's name rather than binding it.
+    expr_type = "bquoted",
     # Four of the ten state values are legitimately empty: a span with no
     # bounds is the whole series, an index with no base is tsbox's own
     # default. Leaving them off this list does not error, it WEDGES: the

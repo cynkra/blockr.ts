@@ -71,8 +71,15 @@ ts_is_set <- function(v) {
   if (is.character(v)) nzchar(v[[1L]]) else TRUE
 }
 
+#' THE INPUT IS A `.()` PLACEHOLDER, NOT THE SYMBOL `data`. With
+#' `expr_type = "bquoted"` blockr.core substitutes the upstream block's own
+#' name into it, so the chunk a report exports reads
+#' `growth <- tsbox::ts_pcy(ours)`. A bare `data` has to be bound instead and
+#' comes out as `growth <- with(list(data = ours), tsbox::ts_pcy(data))` --
+#' correct, runnable, and not something anybody would write.
 #' @noRd
-ts_verb_expr <- function(verb, state, data = as.name("data")) {
+ts_verb_expr <- function(verb, state,
+                         data = call(".", as.name("data"))) {
   spec <- ts_verbs()[[verb]]
   args <- list()
 

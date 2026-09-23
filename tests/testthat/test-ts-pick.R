@@ -1,3 +1,9 @@
+# The block emits `.(data)` placeholders (`expr_type = "bquoted"`), which
+# blockr.core replaces with the upstream block's own name.
+as_bound <- function(e, nm = "data") {
+  do.call(bquote, list(e, stats::setNames(list(as.name(nm)), "data")))
+}
+
 many <- function() {
   # Named, because ts_c() would otherwise name the series by deparsing its
   # arguments and call this one "datasets::mdeaths".
@@ -94,7 +100,7 @@ test_that("a pinned dimension identifies nothing and is dropped", {
   # The expression filters AND drops the pinned columns, which is the work
   # the select block was doing by hand. `ts_pick()` could not: it reads the
   # frame's columns, not our labels, and fails with "values missing in data".
-  r <- eval(ts_pick_expr("a", lay), list(data = d))
+  r <- eval(as_bound(ts_pick_expr("a", lay)), list(data = d))
   expect_identical(names(r), c("dim", "time", "value"))
   expect_identical(unique(r$dim), "a")
   expect_identical(nrow(r), 4L)
@@ -103,7 +109,7 @@ test_that("a pinned dimension identifies nothing and is dropped", {
 test_that("one id column still gets ts_pick(), which keeps the order", {
   lay <- list(ids = "id", varying = "id", time = "time", value = "value")
   expect_identical(
-    ts_pick_expr(c("b", "a"), lay),
+    as_bound(ts_pick_expr(c("b", "a"), lay)),
     quote(tsbox::ts_pick(data, "b", "a"))
   )
 })

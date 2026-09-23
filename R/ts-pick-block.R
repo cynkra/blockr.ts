@@ -83,7 +83,7 @@ new_ts_pick_block <- function(series = character(), ...) {
                 # is not TRUE" on every evaluation. `ts_pick()` with no ids
                 # is not the fallback either: it errors looking for a value
                 # column.
-                return(quote(base::identity(data)))
+                return(bquote(base::identity(.(call(".", as.name("data"))))))
               }
               ts_pick_expr(keep, ts_layout(data()))
             }),
@@ -97,6 +97,10 @@ new_ts_pick_block <- function(series = character(), ...) {
               open = TRUE)
     },
     dat_val = function(data) ts_validate_series(data),
+    # `.(data)` rather than `data`: core substitutes the upstream block's own
+    # name, so the exported chunk reads `raw <- tsbox::ts_pick(gdp, "na")`
+    # instead of wrapping it in a `with(list(data = gdp), ...)`.
+    expr_type = "bquoted",
     # Nothing picked is the starting state and passes everything through.
     allow_empty_state = "series",
     class = "ts_pick_block",
@@ -139,25 +143,30 @@ ts_layout <- function(data) {
 #' @param lay Result of [ts_layout()].
 #' @noRd
 ts_pick_expr <- function(keep, lay) {
+  # `.(data)`, not `data`. With `expr_type = "bquoted"` core substitutes the
+  # upstream block's own name, so the exported chunk reads
+  # `raw <- tsbox::ts_pick(gdp, "na")` rather than wrapping the whole thing
+  # in `with(list(data = gdp), ...)`.
+  dat <- call(".", as.name("data"))
+
   if (is.null(lay) || !length(lay$varying)) {
-    return(quote(base::identity(data)))
+    return(bquote(base::identity(.(dat))))
   }
   if (identical(lay$ids, lay$varying) && length(lay$ids) == 1L) {
-    return(as.call(c(list(quote(tsbox::ts_pick), quote(data)),
-                     as.list(keep))))
+    return(as.call(c(list(quote(tsbox::ts_pick), dat), as.list(keep))))
   }
 
   key <- if (length(lay$varying) == 1L) {
-    call("[[", quote(data), lay$varying)
+    call("[[", dat, lay$varying)
   } else {
     as.call(c(
       list(quote(paste)),
-      lapply(lay$varying, function(i) call("[[", quote(data), i)),
+      lapply(lay$varying, function(i) call("[[", dat, i)),
       list(sep = " \u00b7 ")
     ))
   }
   cols <- c(lay$varying, lay$time, lay$value)
-  bquote(data[.(key) %in% .(keep), .(cols), drop = FALSE])
+  bquote(.(dat)[.(key) %in% .(keep), .(cols), drop = FALSE])
 }
 
 #' One row's worth of facts about each series
