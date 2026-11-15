@@ -1,6 +1,6 @@
 # blockr.ts
 
-Time series support for [blockr](https://blockr-org.github.io/blockr.site/).
+Time series support for [blockr](https://blockr.site).
 Two things: a convention about what a time series *is*, and a preview that
 draws one. Six blocks build on top of them.
 
